@@ -16,6 +16,8 @@ Press **F1** for live controller axes and mapping. Godot/SDL-compatible USB HID 
 
 Keyboard fallback: **W/S** throttle, **arrow keys** roll/pitch, **A/D** yaw, **R** reset, **C** camera mode, and **H** HUD visibility.
 
+The trainer starts stationary on its landing gear near the end of the runway. Advance the throttle, allow it to build speed, and apply gentle up-elevator to rotate and take off. Resetting with **R** returns it to the same ground-start position.
+
 ## Visual presentation
 
 The current scene uses a rounded procedural high-wing trainer with animated control surfaces, landing gear, and a spinning propeller. An original panoramic rural flying-field backdrop is combined with 3D grass, runway markings, safety fencing, cones, and a small hangar. The default ground-pilot camera tracks the airplane and automatically narrows its field of view with distance so the model remains readable during a normal circuit. Chase and onboard cameras remain available with **C**.
@@ -38,7 +40,8 @@ Godot coordinates are used consistently: **-Z forward, +X right, +Y up**. Positi
 - Stall is a smooth coefficient reduction rather than separated-flow simulation.
 - Fuselage, tail, and landing-gear drag are currently combined into the profile-drag coefficient.
 - Control surfaces generate direct moments scaled by dynamic pressure.
-- The visual model is procedural and moderately detailed; its collision box remains deliberately simple.
+- The trainer CG defaults to 33% of the visible wing chord measured aft from the leading edge.
+- The visual model is procedural and moderately detailed; its fuselage and landing-gear collision shapes remain deliberately simple.
 
 ## Project roadmap
 

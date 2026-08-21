@@ -5,6 +5,7 @@ extends Resource
 @export var wing_area_m2 := 0.52
 @export var wing_span_m := 1.65
 @export var mean_chord_m := 0.32
+@export_range(0.20, 0.45, 0.01) var cg_fraction_chord := 0.33
 @export var max_thrust_n := 22.0
 @export var cl_zero := 0.22
 @export var cl_alpha_per_rad := 4.5

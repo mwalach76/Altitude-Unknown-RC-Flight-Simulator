@@ -3,6 +3,10 @@ extends RigidBody3D
 
 const AIR_DENSITY := 1.225
 const VISUAL_SCALE := 1.65
+const WING_CENTER_Z := -0.08 * VISUAL_SCALE
+const WING_CHORD := 0.36 * VISUAL_SCALE
+const RUNWAY_SPAWN := Vector3(0, 0.55, 18.0)
+const GROUND_ATTITUDE_DEG := 12.0
 
 var config := TrainerConfig.new()
 var controls: ControllerManager
@@ -24,6 +28,15 @@ func setup(input_manager: ControllerManager) -> void:
 	mass = config.mass_kg
 	linear_damp = 0.02
 	angular_damp = 0.12
+	# The rigid body's custom mass center is measured in model-local space.
+	# With -Z forward, the leading edge is the wing's most-negative Z point.
+	var wing_leading_edge := WING_CENTER_Z - WING_CHORD * 0.5
+	center_of_mass_mode = RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
+	center_of_mass = Vector3(0, 0, wing_leading_edge + WING_CHORD * config.cg_fraction_chord)
+	var rolling_material := PhysicsMaterial.new()
+	rolling_material.friction = 0.16
+	rolling_material.bounce = 0.02
+	physics_material_override = rolling_material
 	_build_geometry()
 
 func _process(delta: float) -> void:
@@ -67,10 +80,12 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 func reset_aircraft() -> void:
 	crashed = false
 	freeze = true
-	global_transform = Transform3D(Basis.IDENTITY, Vector3(0, 8.0, 18.0))
-	linear_velocity = -global_transform.basis.z * 12.0
+	var ground_basis := Basis(Vector3.RIGHT, deg_to_rad(GROUND_ATTITUDE_DEG))
+	global_transform = Transform3D(ground_basis, RUNWAY_SPAWN)
+	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	freeze = false
+	sleeping = false
 
 func _apply_expo(input_value: float) -> float:
 	return lerpf(input_value, input_value * input_value * input_value, config.control_expo)
@@ -109,11 +124,13 @@ func _build_geometry() -> void:
 	_add_box_to(propeller, Vector3.ZERO, Vector3(0.055, 0.60, 0.025) * VISUAL_SCALE, dark)
 	_add_sphere_to(propeller, Vector3.ZERO, Vector3(0.08, 0.08, 0.06) * VISUAL_SCALE, trim_orange)
 
-	var collision := CollisionShape3D.new()
-	var shape := BoxShape3D.new()
-	shape.size = Vector3(1.7, 0.28, 1.5)
-	collision.shape = shape
-	add_child(collision)
+	# Keep the aerodynamic body origin independent of the contact geometry.
+	# Three wheel contact shapes let the trainer sit on the runway instead of
+	# hovering on the old fuselage-sized collision box.
+	_add_box_collision(Vector3(0, 0, 0.02) * VISUAL_SCALE, Vector3(0.34, 0.30, 1.50) * VISUAL_SCALE)
+	_add_sphere_collision(Vector3(-0.23, -0.25, -0.18) * VISUAL_SCALE, 0.095 * VISUAL_SCALE)
+	_add_sphere_collision(Vector3(0.23, -0.25, -0.18) * VISUAL_SCALE, 0.095 * VISUAL_SCALE)
+	_add_sphere_collision(Vector3(0, -0.10, 0.75) * VISUAL_SCALE, 0.035 * VISUAL_SCALE)
 
 func _surface(pos: Vector3, size: Vector3, material: Material) -> Node3D:
 	var pivot := Node3D.new()
@@ -169,3 +186,19 @@ func _add_sphere_to(parent: Node, pos: Vector3, scale_value: Vector3, material: 
 	instance.position = pos
 	instance.scale = scale_value
 	parent.add_child(instance)
+
+func _add_box_collision(pos: Vector3, size: Vector3) -> void:
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	collision.shape = shape
+	collision.position = pos
+	add_child(collision)
+
+func _add_sphere_collision(pos: Vector3, radius: float) -> void:
+	var collision := CollisionShape3D.new()
+	var shape := SphereShape3D.new()
+	shape.radius = radius
+	collision.shape = shape
+	collision.position = pos
+	add_child(collision)
