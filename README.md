@@ -1,6 +1,6 @@
 # RC Flight Lab
 
-An engineering-oriented RC flight simulator prototype built with Godot 4. It targets macOS (Intel and Apple Silicon) and Windows from one codebase. Milestone 1 provides controller discovery, live axis diagnostics, persistent four-channel assignment/reversal/centering, keyboard fallback, and a flyable fixed-wing trainer.
+An engineering-oriented RC flight simulator prototype built with Godot 4. It targets macOS (Intel and Apple Silicon) and Windows from one codebase. The current prototype provides controller discovery, live axis diagnostics, persistent four-channel assignment/reversal/centering, keyboard fallback, a flyable fixed-wing trainer, and a realistic club-style flying field.
 
 ## Run
 
@@ -14,7 +14,11 @@ Godot's standard desktop export templates produce `.app`/universal macOS builds 
 
 Press **F1** for live controller axes and mapping. Godot/SDL-compatible USB HID controllers—including a Spektrum dongle when the OS exposes it as a joystick—are discovered generically; vendor IDs are not hard-coded. Select the axis for throttle, roll, pitch, and yaw, reverse it if needed, then center the three spring-centered sticks. Mappings are saved using Godot's per-user application-data path (`user://controller_mapping.cfg`), which is appropriate on both macOS and Windows.
 
-Keyboard fallback: **W/S** throttle, **arrow keys** roll/pitch, **A/D** yaw, **R** reset, and **C** camera mode.
+Keyboard fallback: **W/S** throttle, **arrow keys** roll/pitch, **A/D** yaw, **R** reset, **C** camera mode, and **H** HUD visibility.
+
+## Visual presentation
+
+The current scene uses a rounded procedural high-wing trainer with animated control surfaces, landing gear, and a spinning propeller. An original panoramic rural flying-field backdrop is combined with 3D grass, runway markings, safety fencing, cones, and a small hangar. The default ground-pilot camera tracks the airplane and automatically narrows its field of view with distance so the model remains readable during a normal circuit. Chase and onboard cameras remain available with **C**.
 
 ## Physics
 
@@ -34,11 +38,12 @@ Godot coordinates are used consistently: **-Z forward, +X right, +Y up**. Positi
 - Stall is a smooth coefficient reduction rather than separated-flow simulation.
 - Fuselage, tail, and landing-gear drag are currently combined into the profile-drag coefficient.
 - Control surfaces generate direct moments scaled by dynamic pressure.
-- The visual model and collision box are deliberately simple.
+- The visual model is procedural and moderately detailed; its collision box remains deliberately simple.
 
 ## Project roadmap
 
-- **Milestone 1 (current):** controller input and fixed-wing prototype.
+- **Milestone 1:** controller input and fixed-wing prototype.
+- **Visual milestone 1 (current):** detailed trainer, realistic flying field, compact HUD, and distance-aware pilot camera.
 - **Milestone 2:** quadcopter motor/rigid-body model and rate PID controller.
 - **Milestone 3:** live PID lab, plots, step-response analysis, CSV logging.
 - **Milestone 4:** wind, richer calibration/endpoints, configuration resources, tests, and instructional environments.

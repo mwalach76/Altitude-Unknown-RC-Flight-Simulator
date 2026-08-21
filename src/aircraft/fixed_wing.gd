@@ -2,12 +2,22 @@ class_name FixedWing
 extends RigidBody3D
 
 const AIR_DENSITY := 1.225
+const VISUAL_SCALE := 1.65
+
 var config := TrainerConfig.new()
 var controls: ControllerManager
 var crashed := false
 var airspeed := 0.0
 var throttle := 0.0
-const VISUAL_SCALE := 1.65
+var roll_command := 0.0
+var pitch_command := 0.0
+var yaw_command := 0.0
+
+var propeller: Node3D
+var left_aileron: Node3D
+var right_aileron: Node3D
+var elevator_surface: Node3D
+var rudder_surface: Node3D
 
 func setup(input_manager: ControllerManager) -> void:
 	controls = input_manager
@@ -16,18 +26,28 @@ func setup(input_manager: ControllerManager) -> void:
 	angular_damp = 0.12
 	_build_geometry()
 
+func _process(delta: float) -> void:
+	if propeller:
+		propeller.rotate_z(delta * lerpf(4.0, 85.0, throttle))
+	if left_aileron:
+		left_aileron.rotation.x = lerpf(left_aileron.rotation.x, -roll_command * 0.34, 0.25)
+		right_aileron.rotation.x = lerpf(right_aileron.rotation.x, roll_command * 0.34, 0.25)
+	if elevator_surface:
+		elevator_surface.rotation.x = lerpf(elevator_surface.rotation.x, pitch_command * 0.38, 0.25)
+	if rudder_surface:
+		rudder_surface.rotation.y = lerpf(rudder_surface.rotation.y, -yaw_command * 0.42, 0.25)
+
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
-	if controls == null or crashed: return
+	if controls == null or crashed:
+		return
 	throttle = controls.channel(&"throttle")
-	var roll := _apply_expo(controls.channel(&"roll"))
-	var pitch := _apply_expo(controls.channel(&"pitch"))
-	var yaw := _apply_expo(controls.channel(&"yaw"))
+	roll_command = _apply_expo(controls.channel(&"roll"))
+	pitch_command = _apply_expo(controls.channel(&"pitch"))
+	yaw_command = _apply_expo(controls.channel(&"yaw"))
 	var velocity_body := state.transform.basis.inverse() * state.linear_velocity
 	airspeed = velocity_body.length()
 	# Godot body convention used here: forward -Z, right +X, up +Y.
 	var forward_speed := maxf(0.0, -velocity_body.z)
-	# A descending flight path has negative body-Y velocity. With the nose still
-	# level that means positive angle of attack (nose above the flight path).
 	var alpha := atan2(-velocity_body.y, maxf(0.1, forward_speed))
 	var cl := clampf(config.cl_zero + config.cl_alpha_per_rad * alpha, -config.cl_max, config.cl_max)
 	if absf(alpha) > config.stall_angle_rad:
@@ -38,9 +58,8 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 	state.apply_central_force(state.transform.basis.y * lift)
 	state.apply_central_force(state.transform.basis.z * drag)
 	state.apply_central_force(-state.transform.basis.z * config.max_thrust_n * throttle)
-	# Surface authority scales with dynamic pressure; damping limits unrealistic rotation.
 	var authority := clampf(dynamic_pressure / 45.0, 0.05, 2.5)
-	state.apply_torque(state.transform.basis * Vector3(-pitch * config.pitch_effectiveness, -yaw * config.yaw_effectiveness, -roll * config.roll_effectiveness) * authority)
+	state.apply_torque(state.transform.basis * Vector3(-pitch_command * config.pitch_effectiveness, -yaw_command * config.yaw_effectiveness, -roll_command * config.roll_effectiveness) * authority)
 	state.apply_torque(-state.angular_velocity * Vector3(0.8, 0.5, 0.65))
 	if state.transform.origin.y < 0.12 and state.linear_velocity.length() > 4.0:
 		crashed = true
@@ -49,29 +68,104 @@ func reset_aircraft() -> void:
 	crashed = false
 	freeze = true
 	global_transform = Transform3D(Basis.IDENTITY, Vector3(0, 8.0, 18.0))
-	# Milestone 1 uses a hand launch: 12 m/s is safely above this trainer's
-	# approximate stall speed and leaves time to establish powered flight.
 	linear_velocity = -global_transform.basis.z * 12.0
 	angular_velocity = Vector3.ZERO
 	freeze = false
 
 func _apply_expo(input_value: float) -> float:
-	# RC-style expo blends linear and cubic response. Full stick still produces
-	# full command, while the center region becomes less sensitive.
 	return lerpf(input_value, input_value * input_value * input_value, config.control_expo)
 
 func _build_geometry() -> void:
-	_add_box(Vector3(0, 0, 0), Vector3(0.22, 0.22, 1.5), Color("f5a623"))
-	_add_box(Vector3(0, 0.05, -0.15), Vector3(1.7, 0.08, 0.38), Color("f4f4f4"))
-	_add_box(Vector3(0, 0.08, 0.66), Vector3(0.72, 0.05, 0.22), Color("f4f4f4"))
-	_add_box(Vector3(0, 0.25, 0.68), Vector3(0.05, 0.45, 0.25), Color("e95f3c"))
-	var collision := CollisionShape3D.new()
-	var shape := BoxShape3D.new(); shape.size = Vector3(1.7, 0.22, 1.5)
-	collision.shape = shape; add_child(collision)
+	var body_blue := _material(Color("175a9e"), 0.28, 0.15)
+	var wing_white := _material(Color("f4f6f8"), 0.34)
+	var trim_orange := _material(Color("f0a12b"), 0.3)
+	var dark := _material(Color("1b252f"), 0.45)
+	var glass := _material(Color("66b6d6"), 0.12, 0.35)
 
-func _add_box(pos: Vector3, size: Vector3, color: Color) -> void:
-	var mesh_instance := MeshInstance3D.new()
-	var mesh := BoxMesh.new(); mesh.size = size * VISUAL_SCALE
-	var material := StandardMaterial3D.new(); material.albedo_color = color
-	mesh.material = material; mesh_instance.mesh = mesh; mesh_instance.position = pos * VISUAL_SCALE
-	add_child(mesh_instance)
+	_add_cylinder(Vector3(0, 0, 0.02), 0.18, 1.58, body_blue, Vector3(90, 0, 0))
+	_add_sphere(Vector3(0, 0, -0.79), Vector3(0.19, 0.19, 0.22), trim_orange)
+	_add_sphere(Vector3(0, 0.02, 0.78), Vector3(0.15, 0.15, 0.20), body_blue)
+	_add_sphere(Vector3(0, 0.20, -0.16), Vector3(0.15, 0.10, 0.25), glass)
+
+	_add_box(Vector3(0, 0.18, -0.08), Vector3(1.82, 0.07, 0.36), wing_white)
+	_add_box(Vector3(0, 0.205, -0.245), Vector3(1.78, 0.018, 0.055), trim_orange)
+	left_aileron = _surface(Vector3(-0.63, 0.18, 0.135), Vector3(0.52, 0.045, 0.12), body_blue)
+	right_aileron = _surface(Vector3(0.63, 0.18, 0.135), Vector3(0.52, 0.045, 0.12), body_blue)
+
+	_add_box(Vector3(0, 0.06, 0.68), Vector3(0.70, 0.045, 0.16), wing_white)
+	elevator_surface = _surface(Vector3(0, 0.06, 0.80), Vector3(0.68, 0.035, 0.11), trim_orange)
+	_add_box(Vector3(0, 0.25, 0.69), Vector3(0.045, 0.40, 0.19), wing_white)
+	rudder_surface = _surface(Vector3(0, 0.26, 0.83), Vector3(0.035, 0.30, 0.10), trim_orange)
+
+	_add_cylinder(Vector3(-0.23, -0.25, -0.18), 0.095, 0.055, dark, Vector3(0, 0, 90))
+	_add_cylinder(Vector3(0.23, -0.25, -0.18), 0.095, 0.055, dark, Vector3(0, 0, 90))
+	_add_cylinder(Vector3(-0.19, -0.12, -0.14), 0.012, 0.30, dark, Vector3(0, 0, -35))
+	_add_cylinder(Vector3(0.19, -0.12, -0.14), 0.012, 0.30, dark, Vector3(0, 0, 35))
+	_add_sphere(Vector3(0, -0.10, 0.75), Vector3(0.025, 0.025, 0.035), dark)
+
+	propeller = Node3D.new()
+	propeller.position = Vector3(0, 0, -0.99) * VISUAL_SCALE
+	add_child(propeller)
+	_add_box_to(propeller, Vector3.ZERO, Vector3(0.055, 0.60, 0.025) * VISUAL_SCALE, dark)
+	_add_sphere_to(propeller, Vector3.ZERO, Vector3(0.08, 0.08, 0.06) * VISUAL_SCALE, trim_orange)
+
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(1.7, 0.28, 1.5)
+	collision.shape = shape
+	add_child(collision)
+
+func _surface(pos: Vector3, size: Vector3, material: Material) -> Node3D:
+	var pivot := Node3D.new()
+	pivot.position = pos * VISUAL_SCALE
+	add_child(pivot)
+	_add_box_to(pivot, Vector3.ZERO, size * VISUAL_SCALE, material)
+	return pivot
+
+func _material(color: Color, roughness := 0.4, metallic := 0.0) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = roughness
+	material.metallic = metallic
+	return material
+
+func _add_box(pos: Vector3, size: Vector3, material: Material) -> void:
+	_add_box_to(self, pos * VISUAL_SCALE, size * VISUAL_SCALE, material)
+
+func _add_box_to(parent: Node, pos: Vector3, size: Vector3, material: Material) -> void:
+	var instance := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh.material = material
+	instance.mesh = mesh
+	instance.position = pos
+	parent.add_child(instance)
+
+func _add_cylinder(pos: Vector3, radius: float, height: float, material: Material, rotation_deg := Vector3.ZERO) -> void:
+	var instance := MeshInstance3D.new()
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius * VISUAL_SCALE
+	mesh.bottom_radius = radius * VISUAL_SCALE
+	mesh.height = height * VISUAL_SCALE
+	mesh.radial_segments = 20
+	mesh.material = material
+	instance.mesh = mesh
+	instance.position = pos * VISUAL_SCALE
+	instance.rotation_degrees = rotation_deg
+	add_child(instance)
+
+func _add_sphere(pos: Vector3, scale_value: Vector3, material: Material) -> void:
+	_add_sphere_to(self, pos * VISUAL_SCALE, scale_value * VISUAL_SCALE, material)
+
+func _add_sphere_to(parent: Node, pos: Vector3, scale_value: Vector3, material: Material) -> void:
+	var instance := MeshInstance3D.new()
+	var mesh := SphereMesh.new()
+	mesh.height = 2.0
+	mesh.radius = 1.0
+	mesh.radial_segments = 20
+	mesh.rings = 12
+	mesh.material = material
+	instance.mesh = mesh
+	instance.position = pos
+	instance.scale = scale_value
+	parent.add_child(instance)
