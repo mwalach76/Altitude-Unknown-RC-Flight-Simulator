@@ -8,13 +8,25 @@ var device_id := -1
 var mapping := {"throttle": 1, "roll": 0, "pitch": 1, "yaw": 2}
 var reversed := {"throttle": true, "roll": false, "pitch": true, "yaw": false}
 var centers := {"throttle": 0.0, "roll": 0.0, "pitch": 0.0, "yaw": 0.0}
+var minimums := {"throttle": -1.0, "roll": -1.0, "pitch": -1.0, "yaw": -1.0}
+var maximums := {"throttle": 1.0, "roll": 1.0, "pitch": 1.0, "yaw": 1.0}
 var deadband := 0.04
 var throttle_keyboard := 0.0
+var endpoint_calibration_active := false
 
 func _ready() -> void:
 	Input.joy_connection_changed.connect(_on_connection_changed)
 	load_mapping()
 	select_first_device()
+
+func _process(_delta: float) -> void:
+	if not endpoint_calibration_active or device_id < 0:
+		return
+	for channel_name in CHANNELS:
+		var key := String(channel_name)
+		var value := raw_axis(int(mapping[key]))
+		minimums[key] = minf(float(minimums[key]), value)
+		maximums[key] = maxf(float(maximums[key]), value)
 
 func select_first_device() -> void:
 	var devices := Input.get_connected_joypads()
@@ -37,7 +49,17 @@ func raw_axis(axis: int) -> float:
 func channel(channel: StringName) -> float:
 	if device_id < 0:
 		return _keyboard_channel(channel)
-	var value := raw_axis(int(mapping.get(String(channel), 0))) - float(centers.get(String(channel), 0.0))
+	var key := String(channel)
+	var raw_value := raw_axis(int(mapping.get(key, 0)))
+	var minimum := float(minimums.get(key, -1.0))
+	var maximum := float(maximums.get(key, 1.0))
+	var center := float(centers.get(key, 0.0))
+	var value: float
+	if channel == &"throttle":
+		value = remap(raw_value, minimum, maximum, -1.0, 1.0) if maximum - minimum > 0.1 else 0.0
+	else:
+		var extent := maximum - center if raw_value >= center else center - minimum
+		value = (raw_value - center) / maxf(0.05, extent)
 	if bool(reversed.get(String(channel), false)):
 		value = -value
 	if absf(value) < deadband:
@@ -67,12 +89,36 @@ func center_controls() -> void:
 			centers[String(channel_name)] = raw_axis(int(mapping[String(channel_name)]))
 	save_mapping()
 
+func start_endpoint_calibration() -> void:
+	if device_id < 0:
+		return
+	endpoint_calibration_active = true
+	for channel_name in CHANNELS:
+		var key := String(channel_name)
+		var value := raw_axis(int(mapping[key]))
+		minimums[key] = value
+		maximums[key] = value
+
+func finish_endpoint_calibration() -> bool:
+	if not endpoint_calibration_active:
+		return false
+	endpoint_calibration_active = false
+	for channel_name in CHANNELS:
+		var key := String(channel_name)
+		if float(maximums[key]) - float(minimums[key]) < 0.2:
+			minimums[key] = -1.0
+			maximums[key] = 1.0
+	save_mapping()
+	return true
+
 func save_mapping() -> void:
 	var config := ConfigFile.new()
 	for channel_name in CHANNELS:
 		config.set_value("axes", channel_name, mapping[String(channel_name)])
 		config.set_value("reverse", channel_name, reversed[String(channel_name)])
 		config.set_value("center", channel_name, centers[String(channel_name)])
+		config.set_value("minimum", channel_name, minimums[String(channel_name)])
+		config.set_value("maximum", channel_name, maximums[String(channel_name)])
 	config.set_value("calibration", "deadband", deadband)
 	config.save(SAVE_PATH)
 
@@ -83,4 +129,6 @@ func load_mapping() -> void:
 		mapping[String(channel_name)] = config.get_value("axes", channel_name, mapping[String(channel_name)])
 		reversed[String(channel_name)] = config.get_value("reverse", channel_name, reversed[String(channel_name)])
 		centers[String(channel_name)] = config.get_value("center", channel_name, centers[String(channel_name)])
+		minimums[String(channel_name)] = config.get_value("minimum", channel_name, minimums[String(channel_name)])
+		maximums[String(channel_name)] = config.get_value("maximum", channel_name, maximums[String(channel_name)])
 	deadband = config.get_value("calibration", "deadband", deadband)

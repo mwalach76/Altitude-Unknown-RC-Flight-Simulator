@@ -12,6 +12,7 @@ var camera: Camera3D
 var camera_target := Vector3.ZERO
 var hud_visible := true
 var flight_model_button: Button
+var endpoint_button: Button
 
 func _ready() -> void:
 	controller = ControllerManager.new()
@@ -30,6 +31,10 @@ func _process(delta: float) -> void:
 	var lines := PackedStringArray()
 	for axis in controller.axis_count():
 		lines.append("Axis %d   %+.3f" % [axis, controller.raw_axis(axis)])
+	if not lines.is_empty():
+		lines.append("\nNORMALIZED CHANNELS")
+		lines.append("THR %.2f   ROLL %+.2f" % [controller.channel(&"throttle"), controller.channel(&"roll")])
+		lines.append("PITCH %+.2f   YAW %+.2f" % [controller.channel(&"pitch"), controller.channel(&"yaw")])
 	axis_label.text = "LIVE INPUT\n" + "\n".join(lines) if not lines.is_empty() else "NO JOYSTICK DETECTED\nKeyboard controls are active."
 	var viewport_size := get_viewport().get_visible_rect().size
 	help.position = Vector2(20, viewport_size.y - 38)
@@ -135,6 +140,10 @@ func _build_ui() -> void:
 	center.text = "Center roll / pitch / yaw"
 	center.pressed.connect(controller.center_controls)
 	box.add_child(center)
+	endpoint_button = Button.new()
+	endpoint_button.text = "Start endpoint calibration"
+	endpoint_button.pressed.connect(_toggle_endpoint_calibration)
+	box.add_child(endpoint_button)
 	var close := Button.new()
 	close.text = "Close (F1)"
 	close.pressed.connect(func(): setup_panel.visible = false)
@@ -164,6 +173,14 @@ func _add_menu_button(parent: VBoxContainer, label_text: String, callback: Calla
 func toggle_flight_model() -> void:
 	aircraft.toggle_flight_model()
 	_update_flight_model_button()
+
+func _toggle_endpoint_calibration() -> void:
+	if controller.endpoint_calibration_active:
+		controller.finish_endpoint_calibration()
+		endpoint_button.text = "Start endpoint calibration"
+	else:
+		controller.start_endpoint_calibration()
+		endpoint_button.text = "Finish calibration after moving all sticks"
 
 func _update_flight_model_button() -> void:
 	if flight_model_button == null or aircraft == null:
