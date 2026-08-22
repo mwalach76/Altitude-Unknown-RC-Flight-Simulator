@@ -1,5 +1,5 @@
 .godot/
-native/build/
+native/build*/
 native/bin/
 *.tmp
 .DS_Store

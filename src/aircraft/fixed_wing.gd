@@ -72,12 +72,44 @@ func _initialize_jsbsim() -> void:
 		advanced_error = "Native JSBSim extension is not available"
 		return
 	_jsbsim = ClassDB.instantiate(&"JsbsimBridge")
-	var data_root := ProjectSettings.globalize_path("res://assets/jsbsim")
+	var data_root := _jsbsim_data_root()
+	if data_root.is_empty():
+		advanced_error = "Could not prepare the JSBSim aircraft data"
+		_jsbsim = null
+		return
 	if not _jsbsim.initialize(data_root, "Rascal", JSBSIM_STEP):
 		advanced_error = _jsbsim.last_error()
 		_jsbsim = null
 		return
 	set_advanced_mode(true)
+
+func _jsbsim_data_root() -> String:
+	if OS.has_feature("editor"):
+		return ProjectSettings.globalize_path("res://assets/jsbsim")
+	# JSBSim reads its model files through the native filesystem, while exported
+	# Godot resources live inside the PCK. Copy this small data set to user:// so
+	# the native library can open it in standalone builds.
+	var output_root := "user://jsbsim-data"
+	var files := [
+		"aircraft/Rascal/Rascal.xml",
+		"engine/Zenoah_G-26A.xml",
+		"engine/18x8.xml",
+	]
+	for relative_path in files:
+		var output_path: String = output_root.path_join(relative_path)
+		var error := DirAccess.make_dir_recursive_absolute(
+			ProjectSettings.globalize_path(output_path.get_base_dir())
+		)
+		if error != OK:
+			return ""
+		var source := FileAccess.open("res://assets/jsbsim/" + relative_path, FileAccess.READ)
+		if source == null:
+			return ""
+		var destination := FileAccess.open(output_path, FileAccess.WRITE)
+		if destination == null:
+			return ""
+		destination.store_buffer(source.get_buffer(source.get_length()))
+	return ProjectSettings.globalize_path(output_root)
 
 func _physics_process(_delta: float) -> void:
 	if not _advanced_mode or controls == null or crashed:

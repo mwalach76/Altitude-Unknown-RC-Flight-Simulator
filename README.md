@@ -1,6 +1,6 @@
 # RC Flight Lab
 
-An engineering-oriented RC flight simulator prototype built with Godot 4. It targets macOS (Intel and Apple Silicon) and Windows from one codebase. The current prototype provides controller discovery, live axis diagnostics, persistent four-channel assignment/reversal/centering, keyboard fallback, a flyable fixed-wing trainer, and a realistic club-style flying field.
+An engineering-oriented RC flight simulator prototype built with Godot 4. It targets macOS (Intel and Apple Silicon), Windows x86-64, and 64-bit Raspberry Pi from one codebase. The current prototype provides controller discovery, live axis diagnostics, persistent four-channel assignment/reversal/centering, keyboard fallback, a flyable fixed-wing trainer, and a realistic club-style flying field.
 
 ## Run
 
@@ -8,7 +8,21 @@ An engineering-oriented RC flight simulator prototype built with Godot 4. It tar
 2. Import `project.godot` in Godot's Project Manager.
 3. Press **F6/F5** to run.
 
-Godot's standard desktop export templates produce `.app`/universal macOS builds and Windows `.exe` builds. No platform-specific dependency is used.
+## Standalone builds
+
+Download the archive for your platform from the GitHub release page; Godot is
+not required to run an exported build.
+
+- **macOS:** unzip and open `RC Flight Lab.app`. The build is universal for
+  Apple Silicon and Intel Macs. Because the initial release is ad-hoc signed,
+  macOS may require **Control-click > Open** the first time.
+- **Windows:** unzip and run `RC-Flight-Lab.exe` on 64-bit Windows.
+- **Raspberry Pi:** use a 64-bit Raspberry Pi OS with desktop/OpenGL support,
+  extract the `.tar.gz`, and run `./RC-Flight-Lab.arm64`.
+
+The GitHub Actions release workflow compiles the native JSBSim bridge and
+exports all three packages. A tag named `rc-flight-lab-v*` also publishes the
+packages as a GitHub release.
 
 ## Controls and controller setup
 

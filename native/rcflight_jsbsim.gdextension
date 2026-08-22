@@ -6,8 +6,11 @@ reloadable = true
 
 [libraries]
 
-macos.debug.arm64 = "res://native/bin/librcflight_jsbsim.dylib"
-macos.release.arm64 = "res://native/bin/librcflight_jsbsim.dylib"
+macos.debug = "res://native/bin/librcflight_jsbsim.dylib"
+macos.release = "res://native/bin/librcflight_jsbsim.dylib"
+windows.debug.x86_64 = "res://native/bin/librcflight_jsbsim.dll"
+windows.release.x86_64 = "res://native/bin/librcflight_jsbsim.dll"
+linux.debug.arm64 = "res://native/bin/librcflight_jsbsim.so"
+linux.release.arm64 = "res://native/bin/librcflight_jsbsim.so"
 
 [dependencies]
-
