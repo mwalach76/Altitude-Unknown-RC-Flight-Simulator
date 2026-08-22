@@ -35,11 +35,16 @@ with JSBSim 1.3.1. The existing Godot force model is being retained as the
 portable **Simple** mode; JSBSim will provide the nonlinear six-degree-of-
 freedom **Advanced** mode.
 
-The native bridge, pinned dependencies, build instructions, and smoke test are
-under `native/` and `tests/jsbsim_bridge_smoke.gd`. The bridge currently builds
-and loads in Godot 4.7 on Apple Silicon. The included C172 load is only a bridge
-test, not the simulator's future RC trainer. An RC-scale aircraft definition and
-Godot coordinate adapter are required before Advanced mode is exposed in the UI.
+The native bridge, pinned dependencies, build instructions, and smoke tests are
+under `native/` and `tests/`. Advanced mode now loads a SIG Rascal 110 RC model,
+maps transmitter commands into JSBSim, and converts JSBSim's NED state into the
+Godot scene. The menu can switch between **JSBSim Rascal 110** and **Simple**;
+if the native extension is absent, the simulator remains usable in Simple mode.
+
+The Rascal data is an established ArduPilot/FlightGear baseline, but its upstream
+notes call it early-stage rather than validated manufacturer test data. Its data
+source and GPLv3-derived licensing caveat are documented in
+`assets/jsbsim/README.md`.
 
 ## Coordinate convention
 

@@ -16,6 +16,14 @@ var throttle := 0.0
 var roll_command := 0.0
 var pitch_command := 0.0
 var yaw_command := 0.0
+var flight_model_name := "Simple"
+var advanced_error := ""
+
+var _jsbsim: Object
+var _advanced_mode := false
+var _js_position := Vector3.ZERO
+var _js_heading_offset := 0.0
+const JSBSIM_STEP := 1.0 / 120.0
 
 var propeller: Node3D
 var left_aileron: Node3D
@@ -38,6 +46,61 @@ func setup(input_manager: ControllerManager) -> void:
 	rolling_material.bounce = 0.02
 	physics_material_override = rolling_material
 	_build_geometry()
+	_initialize_jsbsim()
+
+func advanced_available() -> bool:
+	return _jsbsim != null
+
+func set_advanced_mode(enabled: bool) -> bool:
+	_advanced_mode = enabled and advanced_available()
+	flight_model_name = "JSBSim Rascal 110" if _advanced_mode else "Simple"
+	custom_integrator = _advanced_mode
+	freeze = _advanced_mode
+	reset_aircraft()
+	return _advanced_mode
+
+func toggle_flight_model() -> bool:
+	return set_advanced_mode(not _advanced_mode)
+
+func _initialize_jsbsim() -> void:
+	if not ClassDB.class_exists(&"JsbsimBridge"):
+		advanced_error = "Native JSBSim extension is not available"
+		return
+	_jsbsim = ClassDB.instantiate(&"JsbsimBridge")
+	var data_root := ProjectSettings.globalize_path("res://assets/jsbsim")
+	if not _jsbsim.initialize(data_root, "Rascal", JSBSIM_STEP):
+		advanced_error = _jsbsim.last_error()
+		_jsbsim = null
+		return
+	set_advanced_mode(true)
+
+func _physics_process(_delta: float) -> void:
+	if not _advanced_mode or controls == null or crashed:
+		return
+	throttle = controls.channel(&"throttle")
+	roll_command = _apply_expo(controls.channel(&"roll"))
+	pitch_command = _apply_expo(controls.channel(&"pitch"))
+	yaw_command = _apply_expo(controls.channel(&"yaw"))
+	# Godot normally runs at 60 Hz; two fixed 120 Hz FDM steps keep JSBSim
+	# deterministic and independent of the display frame rate.
+	var result: Dictionary
+	for iteration in 2:
+		result = _jsbsim.step(throttle, roll_command, pitch_command, yaw_command)
+		_js_position += Vector3(
+			float(result.get("east_mps", 0.0)),
+			-float(result.get("down_mps", 0.0)),
+			-float(result.get("north_mps", 0.0))
+		) * JSBSIM_STEP
+	if not bool(result.get("ready", false)):
+		advanced_error = _jsbsim.last_error()
+		set_advanced_mode(false)
+		return
+	airspeed = float(result.get("airspeed_mps", 0.0))
+	var roll := float(result.get("roll_rad", 0.0))
+	var pitch := float(result.get("pitch_rad", 0.0))
+	var heading := float(result.get("heading_rad", 0.0)) + _js_heading_offset
+	var attitude := Basis(Vector3.UP, -heading) * Basis(Vector3.RIGHT, pitch) * Basis(Vector3.BACK, -roll)
+	global_transform = Transform3D(attitude, _js_position)
 
 func _process(delta: float) -> void:
 	if propeller:
@@ -51,7 +114,7 @@ func _process(delta: float) -> void:
 		rudder_surface.rotation.y = lerpf(rudder_surface.rotation.y, -yaw_command * 0.42, 0.25)
 
 func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
-	if controls == null or crashed:
+	if _advanced_mode or controls == null or crashed:
 		return
 	throttle = controls.channel(&"throttle")
 	roll_command = _apply_expo(controls.channel(&"roll"))
@@ -79,6 +142,14 @@ func _integrate_forces(state: PhysicsDirectBodyState3D) -> void:
 
 func reset_aircraft() -> void:
 	crashed = false
+	if _advanced_mode and _jsbsim != null:
+		_js_position = RUNWAY_SPAWN
+		_js_heading_offset = 0.0
+		_jsbsim.reset(0.55, 0.0, 0.0)
+		global_transform = Transform3D(Basis.IDENTITY, RUNWAY_SPAWN)
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
+		return
 	freeze = true
 	var ground_basis := Basis(Vector3.RIGHT, deg_to_rad(GROUND_ATTITUDE_DEG))
 	global_transform = Transform3D(ground_basis, RUNWAY_SPAWN)

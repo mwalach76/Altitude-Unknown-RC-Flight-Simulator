@@ -11,6 +11,7 @@ var camera_mode := 0
 var camera: Camera3D
 var camera_target := Vector3.ZERO
 var hud_visible := true
+var flight_model_button: Button
 
 func _ready() -> void:
 	controller = ControllerManager.new()
@@ -25,7 +26,7 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("change_camera"):
 		cycle_camera()
 	_update_camera(delta)
-	hud.text = "%s\n%3.0f km/h   %4.0f m   THR %3.0f%%   %s%s" % [controller.device_name(), aircraft.airspeed * 3.6, aircraft.global_position.y, aircraft.throttle * 100.0, ["PILOT", "CHASE", "ONBOARD"][camera_mode], "   •   CRASHED" if aircraft.crashed else ""]
+	hud.text = "%s   •   %s\n%3.0f km/h   %4.0f m   THR %3.0f%%   %s%s" % [controller.device_name(), aircraft.flight_model_name, aircraft.airspeed * 3.6, aircraft.global_position.y, aircraft.throttle * 100.0, ["PILOT", "CHASE", "ONBOARD"][camera_mode], "   •   CRASHED" if aircraft.crashed else ""]
 	var lines := PackedStringArray()
 	for axis in controller.axis_count():
 		lines.append("Axis %d   %+.3f" % [axis, controller.raw_axis(axis)])
@@ -48,6 +49,7 @@ func _spawn_aircraft() -> void:
 	aircraft.setup(controller)
 	aircraft.reset_aircraft()
 	camera_target = aircraft.global_position
+	_update_flight_model_button()
 
 func _build_ui() -> void:
 	var canvas := CanvasLayer.new()
@@ -92,6 +94,8 @@ func _build_ui() -> void:
 	_add_menu_button(quick_box, "Controller setup", func(): setup_panel.visible = true; quick_panel.visible = false)
 	_add_menu_button(quick_box, "Change camera", cycle_camera)
 	_add_menu_button(quick_box, "Reset aircraft", func(): aircraft.reset_aircraft())
+	flight_model_button = _add_menu_button(quick_box, "Flight model", toggle_flight_model)
+	_update_flight_model_button()
 	_add_menu_button(quick_box, "Toggle HUD", toggle_hud)
 	_add_menu_button(quick_box, "Resume", func(): quick_panel.visible = false)
 
@@ -150,12 +154,24 @@ func _panel_style(color: Color, radius: int) -> StyleBoxFlat:
 	style.content_margin_bottom = 10
 	return style
 
-func _add_menu_button(parent: VBoxContainer, label_text: String, callback: Callable) -> void:
+func _add_menu_button(parent: VBoxContainer, label_text: String, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = label_text
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.pressed.connect(callback)
 	parent.add_child(button)
+	return button
+
+func toggle_flight_model() -> void:
+	aircraft.toggle_flight_model()
+	_update_flight_model_button()
+
+func _update_flight_model_button() -> void:
+	if flight_model_button == null or aircraft == null:
+		return
+	flight_model_button.text = "Flight model: %s" % aircraft.flight_model_name
+	flight_model_button.disabled = not aircraft.advanced_available() and aircraft.flight_model_name == "Simple"
+	flight_model_button.tooltip_text = aircraft.advanced_error
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
