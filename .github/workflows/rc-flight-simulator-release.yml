@@ -1,0 +1,143 @@
+name: RC Flight Simulator builds
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "rc-flight-lab-v*"
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: 4.7.2
+  GODOT_STATUS: stable
+  PROJECT_DIR: .
+  RELEASE_BASE: https://github.com/godotengine/godot-builds/releases/download/4.7.2-stable
+
+jobs:
+  macos:
+    name: macOS Universal
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build universal JSBSim extension
+        run: |
+          cmake -S "$PROJECT_DIR/native" -B "$PROJECT_DIR/native/build-release" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGODOTCPP_TARGET=template_release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          cmake --build "$PROJECT_DIR/native/build-release" --target rcflight_jsbsim
+          lipo -info "$PROJECT_DIR/native/bin/librcflight_jsbsim.dylib"
+      - name: Install Godot and export templates
+        run: |
+          curl -L "$RELEASE_BASE/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_macos.universal.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          curl -L "$RELEASE_BASE/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz" -o /tmp/templates.zip
+          mkdir -p "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
+          unzip -q /tmp/templates.zip -d /tmp/templates
+          cp -R /tmp/templates/templates/. "$HOME/Library/Application Support/Godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}/"
+      - name: Test and export
+        run: |
+          GODOT=/tmp/godot/Godot.app/Contents/MacOS/Godot
+          "$GODOT" --headless --path "$PROJECT_DIR" --import
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_ground_stability.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_visual_smoke.gd
+          mkdir -p "$PROJECT_DIR/builds"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "macOS Universal" builds/RC-Flight-Lab-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RC-Flight-Lab-macOS
+          path: builds/RC-Flight-Lab-macOS.zip
+
+  windows:
+    name: Windows x86-64
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build JSBSim extension
+        shell: pwsh
+        run: |
+          cmake -S "$env:PROJECT_DIR/native" -B "$env:PROJECT_DIR/native/build-release" -G Ninja -DCMAKE_BUILD_TYPE=Release -DGODOTCPP_TARGET=template_release
+          cmake --build "$env:PROJECT_DIR/native/build-release" --target rcflight_jsbsim
+      - name: Install Godot and export templates
+        shell: pwsh
+        run: |
+          Invoke-WebRequest "$env:RELEASE_BASE/Godot_v$env:GODOT_VERSION-$env:GODOT_STATUS`_win64.exe.zip" -OutFile "$env:RUNNER_TEMP/godot.zip"
+          Expand-Archive "$env:RUNNER_TEMP/godot.zip" "$env:RUNNER_TEMP/godot"
+          Invoke-WebRequest "$env:RELEASE_BASE/Godot_v$env:GODOT_VERSION-$env:GODOT_STATUS`_export_templates.tpz" -OutFile "$env:RUNNER_TEMP/templates.zip"
+          Expand-Archive "$env:RUNNER_TEMP/templates.zip" "$env:RUNNER_TEMP/templates"
+          $templateDir = "$env:APPDATA/Godot/export_templates/$env:GODOT_VERSION.$env:GODOT_STATUS"
+          New-Item -ItemType Directory -Force $templateDir | Out-Null
+          Copy-Item "$env:RUNNER_TEMP/templates/templates/*" $templateDir -Recurse -Force
+      - name: Test and export
+        shell: pwsh
+        run: |
+          $godot = Get-ChildItem "$env:RUNNER_TEMP/godot/Godot*.exe" | Select-Object -First 1
+          & $godot.FullName --headless --path $env:PROJECT_DIR --import
+          & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/rascal_ground_stability.gd
+          & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/rascal_visual_smoke.gd
+          New-Item -ItemType Directory -Force "$env:PROJECT_DIR/builds/windows" | Out-Null
+          & $godot.FullName --headless --path $env:PROJECT_DIR --export-release "Windows x86-64" builds/windows/RC-Flight-Lab.exe
+          Compress-Archive "$env:PROJECT_DIR/builds/windows/*" "$env:PROJECT_DIR/builds/RC-Flight-Lab-Windows-x86_64.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RC-Flight-Lab-Windows-x86_64
+          path: builds/RC-Flight-Lab-Windows-x86_64.zip
+
+  raspberry_pi:
+    name: Raspberry Pi ARM64
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build JSBSim extension
+        run: |
+          cmake -S "$PROJECT_DIR/native" -B "$PROJECT_DIR/native/build-release" -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DGODOTCPP_TARGET=template_release
+          cmake --build "$PROJECT_DIR/native/build-release" --target rcflight_jsbsim
+      - name: Install Godot and export templates
+        run: |
+          curl -L "$RELEASE_BASE/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.arm64.zip" -o /tmp/godot.zip
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          chmod +x /tmp/godot/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.arm64
+          curl -L "$RELEASE_BASE/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz" -o /tmp/templates.zip
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
+          unzip -q /tmp/templates.zip -d /tmp/templates
+          cp -R /tmp/templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}/"
+      - name: Test and export
+        run: |
+          GODOT=/tmp/godot/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.arm64
+          "$GODOT" --headless --path "$PROJECT_DIR" --import
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_ground_stability.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_visual_smoke.gd
+          mkdir -p "$PROJECT_DIR/builds/raspberry-pi"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Raspberry Pi ARM64" builds/raspberry-pi/RC-Flight-Lab.arm64
+          chmod +x "$PROJECT_DIR/builds/raspberry-pi/RC-Flight-Lab.arm64"
+          tar -C "$PROJECT_DIR/builds/raspberry-pi" -czf "$PROJECT_DIR/builds/RC-Flight-Lab-Raspberry-Pi-arm64.tar.gz" .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RC-Flight-Lab-Raspberry-Pi-arm64
+          path: builds/RC-Flight-Lab-Raspberry-Pi-arm64.tar.gz
+
+  release:
+    name: Publish GitHub release
+    if: startsWith(github.ref, 'refs/tags/rc-flight-lab-v')
+    needs: [macos, windows, raspberry_pi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/*
