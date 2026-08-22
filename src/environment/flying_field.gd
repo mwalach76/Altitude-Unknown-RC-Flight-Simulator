@@ -1,7 +1,47 @@
 class_name FlyingField
 extends Node3D
 
-const PANORAMA := preload("res://assets/environment/rc_flying_field_panorama_v3.png")
+const PANORAMA := preload("res://assets/environment/rc_flying_field_panorama_v4.png")
+
+const GRASS_SHADER := """
+shader_type spatial;
+render_mode diffuse_burley;
+
+varying vec3 world_position;
+
+float hash21(vec2 p) {
+	p = fract(p * vec2(123.34, 456.21));
+	p += dot(p, p + 45.32);
+	return fract(p.x * p.y);
+}
+
+float value_noise(vec2 p) {
+	vec2 cell = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(
+		mix(hash21(cell), hash21(cell + vec2(1.0, 0.0)), f.x),
+		mix(hash21(cell + vec2(0.0, 1.0)), hash21(cell + vec2(1.0, 1.0)), f.x),
+		f.y
+	);
+}
+
+void vertex() {
+	world_position = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+
+void fragment() {
+	vec2 p = world_position.xz;
+	float broad = value_noise(p * 0.055);
+	float clumps = value_noise(p * 0.38);
+	float blades = hash21(floor(p * 5.5));
+	float variation = broad * 0.48 + clumps * 0.37 + blades * 0.15;
+	vec3 dry_grass = vec3(0.25, 0.36, 0.10);
+	vec3 green_grass = vec3(0.12, 0.32, 0.075);
+	ALBEDO = mix(dry_grass, green_grass, variation);
+	ROUGHNESS = 0.96;
+}
+"""
 
 var _windsock_pivot: Node3D
 var _windsock_time := 0.0
@@ -69,9 +109,10 @@ func _add_ground() -> void:
 	var mesh_instance := MeshInstance3D.new()
 	var plane := BoxMesh.new()
 	plane.size = Vector3(360, 0.1, 360)
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color("315f32")
-	material.roughness = 0.96
+	var material := ShaderMaterial.new()
+	var shader := Shader.new()
+	shader.code = GRASS_SHADER
+	material.shader = shader
 	plane.material = material
 	mesh_instance.mesh = plane
 	ground.add_child(mesh_instance)

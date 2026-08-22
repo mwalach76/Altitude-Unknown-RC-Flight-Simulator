@@ -72,6 +72,10 @@ duplicate in `assets/jsbsim/aircraft/Juggy/Juggy.xml`, giving us a separate
 flight model whose aerodynamics, mass, controls, and stall behavior can be
 changed without altering Rascal.
 
+Juggy's initial experimental tune doubles both parasite and induced drag for
+roughly half Rascal's best glide ratio, and doubles its aileron, elevator, and
+rudder moment coefficients for twice the control response.
+
 The Rascal data is an established ArduPilot/FlightGear baseline, but its upstream
 notes call it early-stage rather than validated manufacturer test data. Its data
 source and GPLv3-derived licensing caveat are documented in

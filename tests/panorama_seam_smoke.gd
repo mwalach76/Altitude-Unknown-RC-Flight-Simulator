@@ -1,7 +1,7 @@
 extends SceneTree
 
 func _init() -> void:
-	var source: Texture2D = load("res://assets/environment/rc_flying_field_panorama_v3.png")
+	var source: Texture2D = load("res://assets/environment/rc_flying_field_panorama_v4.png")
 	var image := FlyingField.make_seamless_panorama(source).get_image()
 	if image.is_empty():
 		_fail("Panorama failed to load")

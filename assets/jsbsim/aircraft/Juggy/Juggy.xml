@@ -267,11 +267,11 @@
                       <table>
                           <independentVar>aero/alpha-rad</independentVar>
                           <tableData>
-                              -1.5700	1.5000
-                              -0.2600	0.0560
-                              0.0000	0.0280
-                              0.2600	0.0560
-                              1.5700	1.5000
+                              -1.5700	3.0000
+                              -0.2600	0.1120
+                              0.0000	0.0560
+                              0.2600	0.1120
+                              1.5700	3.0000
                           </tableData>
                       </table>
                 </product>
@@ -282,7 +282,9 @@
                     <property>aero/qbar-psf</property>
                     <property>metrics/Sw-sqft</property>
                     <property>aero/cl-squared</property>
-                    <value>0.0400</value>
+                    <!-- Twice Rascal's parasite and induced drag gives Juggy
+                         approximately half the best lift-to-drag ratio. -->
+                    <value>0.0800</value>
                 </product>
             </function>
             <function name="aero/coefficient/CDbeta">
@@ -397,8 +399,8 @@
                       <table>
                           <independentVar>velocities/mach</independentVar>
                           <tableData>
-                              0.0000	0.1300
-                              2.0000	0.0570
+                              0.0000	0.2600
+                              2.0000	0.1140
                           </tableData>
                       </table>
                 </product>
@@ -436,8 +438,8 @@
                       <table>
                           <independentVar>velocities/mach</independentVar>
                           <tableData>
-                              0.0000	-0.5000	<!-- was -1.1 -->
-                              2.0000	-0.2750
+                              0.0000	-1.0000
+                              2.0000	-0.5500
                           </tableData>
                       </table>
                 </product>
@@ -495,7 +497,7 @@
                     <property>metrics/Sw-sqft</property>
                     <property>metrics/bw-ft</property>
                     <property>fcs/rudder-pos-rad</property>
-                    <value>-0.0500</value>
+                    <value>-0.1000</value>
                 </product>
             </function>
             <function name="aero/coefficient/Cnda">
