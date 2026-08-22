@@ -22,7 +22,9 @@ func _run() -> void:
 		return
 	var liftoff_position: Vector3 = simulator.aircraft.global_position
 	var liftoff_pitch: float = simulator.aircraft.rotation.x
+	var minimum_height := liftoff_position.y
 	await physics_frame
+	minimum_height = minf(minimum_height, simulator.aircraft.global_position.y)
 	if absf(simulator.aircraft.global_position.y - liftoff_position.y) > 0.1:
 		_fail("Aircraft jumped vertically at the airborne handoff")
 		return
@@ -31,6 +33,7 @@ func _run() -> void:
 		return
 	for frame in 29:
 		await physics_frame
+		minimum_height = minf(minimum_height, simulator.aircraft.global_position.y)
 	var aircraft_position: Vector3 = simulator.aircraft.global_position
 	var camera_position: Vector3 = simulator.camera.global_position
 	var camera_forward: Vector3 = -simulator.camera.global_basis.z
@@ -40,6 +43,9 @@ func _run() -> void:
 		return
 	if aircraft_position.distance_to(liftoff_position) > 15.0:
 		_fail("Aircraft jumped an unrealistic distance at the airborne handoff")
+		return
+	if minimum_height < liftoff_position.y - 0.001:
+		_fail("Aircraft sank below runway height during liftoff")
 		return
 	if camera_forward.dot(target_direction) < 0.999:
 		_fail("Pilot camera is not aimed at its target after liftoff")

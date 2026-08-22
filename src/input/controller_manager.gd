@@ -13,6 +13,7 @@ var maximums := {"throttle": 1.0, "roll": 1.0, "pitch": 1.0, "yaw": 1.0}
 var deadband := 0.04
 var throttle_keyboard := 0.0
 var endpoint_calibration_active := false
+var throttle_armed := false
 
 func _ready() -> void:
 	Input.joy_connection_changed.connect(_on_connection_changed)
@@ -34,6 +35,7 @@ func select_first_device() -> void:
 
 func _on_connection_changed(_device: int, _connected: bool) -> void:
 	select_first_device()
+	throttle_armed = false
 
 func device_name() -> String:
 	return Input.get_joy_name(device_id) if device_id >= 0 else "Keyboard fallback"
@@ -65,7 +67,16 @@ func channel(channel: StringName) -> float:
 	if absf(value) < deadband:
 		value = 0.0
 	value = clampf(value / maxf(0.01, 1.0 - deadband), -1.0, 1.0)
-	return (value + 1.0) * 0.5 if channel == &"throttle" else value
+	if channel == &"throttle":
+		var normalized_throttle := (value + 1.0) * 0.5
+		# HID receivers commonly report center for a few frames at startup. Keep
+		# the motor safely at zero until the calibrated low endpoint is observed.
+		if not throttle_armed:
+			if normalized_throttle <= 0.1:
+				throttle_armed = true
+			return 0.0
+		return normalized_throttle
+	return value
 
 func _keyboard_channel(channel: StringName) -> float:
 	if channel == &"throttle":
@@ -93,6 +104,7 @@ func start_endpoint_calibration() -> void:
 	if device_id < 0:
 		return
 	endpoint_calibration_active = true
+	throttle_armed = false
 	for channel_name in CHANNELS:
 		var key := String(channel_name)
 		var value := raw_axis(int(mapping[key]))

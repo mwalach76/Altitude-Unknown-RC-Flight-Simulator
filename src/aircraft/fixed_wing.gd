@@ -140,6 +140,11 @@ func _physics_process(_delta: float) -> void:
 			-float(result.get("down_mps", 0.0)),
 			-float(result.get("north_mps", 0.0))
 		) * JSBSIM_STEP
+	# The advanced model has no usable wheel-contact phase. Do not let a small
+	# initial sink put the visual model below the runway while thrust and control
+	# authority blend in; upward velocity still produces a natural liftoff.
+	if _airborne_handoff_s < AIRBORNE_CONTROL_BLEND_S:
+		_js_position.y = maxf(_js_position.y, RUNWAY_SPAWN.y)
 	if not bool(result.get("ready", false)):
 		advanced_error = _jsbsim.last_error()
 		set_advanced_mode(false)
@@ -167,7 +172,7 @@ func _step_advanced_ground(delta: float) -> void:
 	_js_position += forward * _ground_speed * delta
 	global_transform = Transform3D(Basis(Vector3.UP, -_ground_heading) * Basis(Vector3.RIGHT, ADVANCED_GROUND_PITCH), _js_position)
 	airspeed = _ground_speed
-	if _ground_speed >= ADVANCED_LIFTOFF_SPEED and (pitch_command < -0.08 or _ground_speed >= ADVANCED_LIFTOFF_SPEED + 2.0):
+	if _ground_speed >= ADVANCED_LIFTOFF_SPEED and pitch_command < -0.08:
 		_js_grounded = false
 		_airborne_handoff_s = 0.0
 		_js_heading_offset = 0.0
