@@ -22,7 +22,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("reset_aircraft"):
-		aircraft.reset_aircraft()
+		reset_simulation()
 	if Input.is_action_just_pressed("change_camera"):
 		cycle_camera()
 	_update_camera(delta)
@@ -47,8 +47,7 @@ func _spawn_aircraft() -> void:
 	aircraft = FixedWing.new()
 	add_child(aircraft)
 	aircraft.setup(controller)
-	aircraft.reset_aircraft()
-	camera_target = aircraft.global_position
+	reset_simulation()
 	_update_flight_model_button()
 
 func _build_ui() -> void:
@@ -93,7 +92,7 @@ func _build_ui() -> void:
 	quick_box.add_child(quick_title)
 	_add_menu_button(quick_box, "Controller setup", func(): setup_panel.visible = true; quick_panel.visible = false)
 	_add_menu_button(quick_box, "Change camera", cycle_camera)
-	_add_menu_button(quick_box, "Reset aircraft", func(): aircraft.reset_aircraft())
+	_add_menu_button(quick_box, "Reset aircraft", reset_simulation)
 	flight_model_button = _add_menu_button(quick_box, "Flight model", toggle_flight_model)
 	_update_flight_model_button()
 	_add_menu_button(quick_box, "Toggle HUD", toggle_hud)
@@ -187,6 +186,17 @@ func toggle_hud() -> void:
 	hud_visible = not hud_visible
 	hud.get_parent().visible = hud_visible
 	help.visible = hud_visible
+
+func reset_simulation() -> void:
+	if aircraft == null:
+		return
+	aircraft.reset_aircraft()
+	camera_mode = 0
+	camera_target = aircraft.global_position
+	var pilot_position := Vector3(14.0, 2.5, 20.0)
+	camera.global_position = pilot_position
+	camera.fov = 48.0
+	camera.look_at(camera_target, Vector3.UP)
 
 func _update_camera(delta: float) -> void:
 	if aircraft == null:

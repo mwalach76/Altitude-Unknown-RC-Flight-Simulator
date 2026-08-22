@@ -61,6 +61,14 @@ bool JsbsimBridge::reset(double altitude_m, double airspeed_mps,
     return false;
   }
 
+  // Reset every model (including FCS filters and propulsion) before applying
+  // the new launch conditions. RunIC alone resets the rigid-body state but can
+  // leave command-dependent model state from the previous flight intact.
+  fdm_->ResetToInitialConditions(JSBSim::FGFDMExec::DONT_EXECUTE_RUN_IC);
+  fdm_->SetPropertyValue("fcs/throttle-cmd-norm", 0.0);
+  fdm_->SetPropertyValue("fcs/aileron-cmd-norm", 0.0);
+  fdm_->SetPropertyValue("fcs/elevator-cmd-norm", 0.0);
+  fdm_->SetPropertyValue("fcs/rudder-cmd-norm", 0.0);
   fdm_->SetPropertyValue("ic/h-sl-ft", altitude_m * 3.280839895);
   fdm_->SetPropertyValue("ic/terrain-elevation-ft", 0.0);
   fdm_->SetPropertyValue("ic/u-fps", airspeed_mps * 3.280839895);
@@ -69,6 +77,9 @@ bool JsbsimBridge::reset(double altitude_m, double airspeed_mps,
   fdm_->SetPropertyValue("ic/psi-true-deg", heading_deg);
   fdm_->SetPropertyValue("ic/phi-deg", 0.0);
   fdm_->SetPropertyValue("ic/theta-deg", pitch_deg);
+  fdm_->SetPropertyValue("ic/p-rad_sec", 0.0);
+  fdm_->SetPropertyValue("ic/q-rad_sec", 0.0);
+  fdm_->SetPropertyValue("ic/r-rad_sec", 0.0);
 
   if (!fdm_->RunIC()) {
     error_ = "JSBSim initial-condition solve failed";
