@@ -13,9 +13,9 @@ An engineering-oriented RC flight simulator prototype built with Godot 4. It tar
 Download the archive for your platform from the GitHub release page; Godot is
 not required to run an exported build.
 
-- **macOS:** unzip and open `RC Flight Lab.app`. The build is universal for
-  Apple Silicon and Intel Macs. Because the initial release is ad-hoc signed,
-  macOS may require **Control-click > Open** the first time.
+- **macOS:** unzip and open `RC Flight Lab.app`. Release builds are universal
+  for Apple Silicon and Intel Macs, Developer ID signed, notarized by Apple,
+  and stapled so they pass Gatekeeper normally.
 - **Windows:** unzip and run `RC-Flight-Lab.exe` on 64-bit Windows.
 - **Raspberry Pi:** use a 64-bit Raspberry Pi OS with desktop/OpenGL support,
   extract the `.tar.gz`, and run `./RC-Flight-Lab.arm64`.
@@ -23,6 +23,9 @@ not required to run an exported build.
 The GitHub Actions release workflow compiles the native JSBSim bridge and
 exports all three packages. A tag named `rc-flight-lab-v*` also publishes the
 packages as a GitHub release.
+
+Maintainer setup for the protected Apple credentials is documented in
+[`docs/MACOS_SIGNING.md`](docs/MACOS_SIGNING.md).
 
 ## Controls and controller setup
 

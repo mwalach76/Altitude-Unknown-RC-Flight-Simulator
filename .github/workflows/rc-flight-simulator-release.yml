@@ -21,6 +21,13 @@ jobs:
   macos:
     name: macOS Universal
     runs-on: macos-14
+    env:
+      MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,8 +57,63 @@ jobs:
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/reset_camera_smoke.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/takeoff_camera_smoke.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_visual_smoke.gd
-          mkdir -p "$PROJECT_DIR/builds"
-          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "macOS Universal" builds/RC-Flight-Lab-macOS.zip
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/aircraft_selection_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/juggy_tuning_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/juggy_takeoff_distance_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/juggy_takeoff_smoothness.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/panorama_seam_smoke.gd
+          mkdir -p "$PROJECT_DIR/builds/macos"
+          "$GODOT" --headless --path "$PROJECT_DIR" --export-release "macOS Universal" "builds/macos/RC Flight Lab.app"
+      - name: Require Apple credentials for releases
+        if: startsWith(github.ref, 'refs/tags/rc-flight-lab-v')
+        run: |
+          missing=0
+          for name in MACOS_CERTIFICATE_P12_BASE64 MACOS_CERTIFICATE_PASSWORD MACOS_SIGNING_IDENTITY APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Required repository secret $name is not configured"
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Import Developer ID certificate
+        if: startsWith(github.ref, 'refs/tags/rc-flight-lab-v')
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/developer-id.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)$(uuidgen)"
+          echo "$MACOS_CERTIFICATE_P12_BASE64" | base64 -D > "$CERTIFICATE_PATH"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+      - name: Sign, notarize, and staple macOS app
+        if: startsWith(github.ref, 'refs/tags/rc-flight-lab-v')
+        run: |
+          APP_PATH="$PROJECT_DIR/builds/macos/RC Flight Lab.app"
+          NOTARY_ZIP="$RUNNER_TEMP/RC-Flight-Lab-notary.zip"
+          find "$APP_PATH/Contents/Frameworks" -type f -name '*.dylib' -print0 | while IFS= read -r -d '' library; do
+            codesign --force --options runtime --timestamp \
+              --sign "$MACOS_SIGNING_IDENTITY" "$library"
+          done
+          codesign --force --options runtime --timestamp \
+            --sign "$MACOS_SIGNING_IDENTITY" "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          ditto -c -k --keepParent "$APP_PATH" "$NOTARY_ZIP"
+          xcrun notarytool submit "$NOTARY_ZIP" --wait \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID"
+          xcrun stapler staple "$APP_PATH"
+          xcrun stapler validate "$APP_PATH"
+          spctl --assess --type execute --verbose=2 "$APP_PATH"
+      - name: Package macOS app
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$PROJECT_DIR/builds/macos/RC Flight Lab.app" \
+            "$PROJECT_DIR/builds/RC-Flight-Lab-macOS.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: RC-Flight-Lab-macOS
@@ -89,6 +151,11 @@ jobs:
           & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/reset_camera_smoke.gd
           & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/takeoff_camera_smoke.gd
           & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/rascal_visual_smoke.gd
+          & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/aircraft_selection_smoke.gd
+          & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/juggy_tuning_smoke.gd
+          & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/juggy_takeoff_distance_smoke.gd
+          & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/juggy_takeoff_smoothness.gd
+          & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/panorama_seam_smoke.gd
           New-Item -ItemType Directory -Force "$env:PROJECT_DIR/builds/windows" | Out-Null
           & $godot.FullName --headless --path $env:PROJECT_DIR --export-release "Windows x86-64" builds/windows/RC-Flight-Lab.exe
           Compress-Archive "$env:PROJECT_DIR/builds/windows/*" "$env:PROJECT_DIR/builds/RC-Flight-Lab-Windows-x86_64.zip"
@@ -127,6 +194,11 @@ jobs:
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/reset_camera_smoke.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/takeoff_camera_smoke.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_visual_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/aircraft_selection_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/juggy_tuning_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/juggy_takeoff_distance_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/juggy_takeoff_smoothness.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/panorama_seam_smoke.gd
           mkdir -p "$PROJECT_DIR/builds/raspberry-pi"
           "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Raspberry Pi ARM64" builds/raspberry-pi/RC-Flight-Lab.arm64
           chmod +x "$PROJECT_DIR/builds/raspberry-pi/RC-Flight-Lab.arm64"
