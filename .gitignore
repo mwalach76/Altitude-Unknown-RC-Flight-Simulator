@@ -1,4 +1,6 @@
 .godot/
+native/build/
+native/bin/
 *.tmp
 .DS_Store
 builds/

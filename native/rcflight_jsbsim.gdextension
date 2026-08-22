@@ -1,0 +1,13 @@
+[configuration]
+
+entry_symbol = "rcflight_jsbsim_init"
+compatibility_minimum = "4.7"
+reloadable = true
+
+[libraries]
+
+macos.debug.arm64 = "res://native/bin/librcflight_jsbsim.dylib"
+macos.release.arm64 = "res://native/bin/librcflight_jsbsim.dylib"
+
+[dependencies]
+

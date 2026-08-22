@@ -28,6 +28,19 @@ The trainer uses an explicit aerodynamic force model rather than only engine dam
 
 Aircraft parameters live in `src/aircraft/trainer_config.gd`; a future milestone will convert instances to `.tres` resources and add an editor UI.
 
+### JSBSim advanced model
+
+The `feature/rc-sim-jsbsim` branch contains an in-progress native integration
+with JSBSim 1.3.1. The existing Godot force model is being retained as the
+portable **Simple** mode; JSBSim will provide the nonlinear six-degree-of-
+freedom **Advanced** mode.
+
+The native bridge, pinned dependencies, build instructions, and smoke test are
+under `native/` and `tests/jsbsim_bridge_smoke.gd`. The bridge currently builds
+and loads in Godot 4.7 on Apple Silicon. The included C172 load is only a bridge
+test, not the simulator's future RC trainer. An RC-scale aircraft definition and
+Godot coordinate adapter are required before Advanced mode is exposed in the UI.
+
 ## Coordinate convention
 
 Godot coordinates are used consistently: **-Z forward, +X right, +Y up**. Positive body rotations follow Godot's right-hand convention. Aerodynamic calculations use SI units: metres, seconds, kilograms, Newtons, and radians.
