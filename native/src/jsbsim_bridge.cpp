@@ -14,9 +14,9 @@ void JsbsimBridge::_bind_methods() {
                                 "fixed_step_seconds"),
                        &JsbsimBridge::initialize, DEFVAL(1.0 / 120.0));
   ClassDB::bind_method(D_METHOD("reset", "altitude_m", "airspeed_mps",
-                                "heading_deg"),
+                                "heading_deg", "pitch_deg"),
                        &JsbsimBridge::reset, DEFVAL(0.5), DEFVAL(0.0),
-                       DEFVAL(0.0));
+                       DEFVAL(0.0), DEFVAL(0.0));
   ClassDB::bind_method(D_METHOD("step", "throttle", "aileron", "elevator",
                                 "rudder"),
                        &JsbsimBridge::step);
@@ -55,7 +55,7 @@ bool JsbsimBridge::initialize(const String &data_root,
 }
 
 bool JsbsimBridge::reset(double altitude_m, double airspeed_mps,
-                         double heading_deg) {
+                         double heading_deg, double pitch_deg) {
   if (!fdm_) {
     error_ = "JSBSim is not initialized";
     return false;
@@ -68,7 +68,7 @@ bool JsbsimBridge::reset(double altitude_m, double airspeed_mps,
   fdm_->SetPropertyValue("ic/w-fps", 0.0);
   fdm_->SetPropertyValue("ic/psi-true-deg", heading_deg);
   fdm_->SetPropertyValue("ic/phi-deg", 0.0);
-  fdm_->SetPropertyValue("ic/theta-deg", 0.0);
+  fdm_->SetPropertyValue("ic/theta-deg", pitch_deg);
 
   if (!fdm_->RunIC()) {
     error_ = "JSBSim initial-condition solve failed";

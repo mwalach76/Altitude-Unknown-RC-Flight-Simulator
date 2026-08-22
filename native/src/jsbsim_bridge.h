@@ -19,7 +19,7 @@ class JsbsimBridge : public RefCounted {
   bool initialize(const String &data_root, const String &aircraft_name,
                   double fixed_step_seconds = 1.0 / 120.0);
   bool reset(double altitude_m = 0.5, double airspeed_mps = 0.0,
-             double heading_deg = 0.0);
+             double heading_deg = 0.0, double pitch_deg = 0.0);
   Dictionary step(double throttle, double aileron, double elevator,
                   double rudder);
   Dictionary state() const;

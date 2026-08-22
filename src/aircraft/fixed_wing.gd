@@ -23,7 +23,12 @@ var _jsbsim: Object
 var _advanced_mode := false
 var _js_position := Vector3.ZERO
 var _js_heading_offset := 0.0
+var _js_grounded := true
+var _ground_speed := 0.0
+var _ground_heading := 0.0
 const JSBSIM_STEP := 1.0 / 120.0
+const ADVANCED_GROUND_PITCH := deg_to_rad(12.0)
+const ADVANCED_LIFTOFF_SPEED := 11.0
 
 var propeller: Node3D
 var left_aileron: Node3D
@@ -81,6 +86,9 @@ func _physics_process(_delta: float) -> void:
 	roll_command = _apply_expo(controls.channel(&"roll"))
 	pitch_command = _apply_expo(controls.channel(&"pitch"))
 	yaw_command = _apply_expo(controls.channel(&"yaw"))
+	if _js_grounded:
+		_step_advanced_ground(_delta)
+		return
 	# Godot normally runs at 60 Hz; two fixed 120 Hz FDM steps keep JSBSim
 	# deterministic and independent of the display frame rate.
 	var result: Dictionary
@@ -101,6 +109,23 @@ func _physics_process(_delta: float) -> void:
 	var heading := float(result.get("heading_rad", 0.0)) + _js_heading_offset
 	var attitude := Basis(Vector3.UP, -heading) * Basis(Vector3.RIGHT, pitch) * Basis(Vector3.BACK, -roll)
 	global_transform = Transform3D(attitude, _js_position)
+
+func _step_advanced_ground(delta: float) -> void:
+	# The upstream Rascal's spring-gear model is numerically unstable at rest.
+	# Keep the runway roll deterministic, then hand the aircraft to JSBSim at
+	# flying speed. JSBSim remains responsible for all airborne dynamics.
+	var acceleration := throttle * 5.2 - 0.032 * _ground_speed * _ground_speed
+	_ground_speed = maxf(0.0, _ground_speed + acceleration * delta)
+	_ground_heading += yaw_command * minf(_ground_speed / 5.0, 1.0) * delta * 0.65
+	var forward := Vector3(sin(_ground_heading), 0.0, -cos(_ground_heading))
+	_js_position += forward * _ground_speed * delta
+	global_transform = Transform3D(Basis(Vector3.UP, -_ground_heading) * Basis(Vector3.RIGHT, ADVANCED_GROUND_PITCH), _js_position)
+	airspeed = _ground_speed
+	if _ground_speed >= ADVANCED_LIFTOFF_SPEED and (pitch_command < -0.08 or _ground_speed >= ADVANCED_LIFTOFF_SPEED + 2.0):
+		_js_grounded = false
+		_js_position.y = 1.0
+		_js_heading_offset = 0.0
+		_jsbsim.reset(1.0, _ground_speed, rad_to_deg(_ground_heading), 6.0)
 
 func _process(delta: float) -> void:
 	if propeller:
@@ -145,8 +170,10 @@ func reset_aircraft() -> void:
 	if _advanced_mode and _jsbsim != null:
 		_js_position = RUNWAY_SPAWN
 		_js_heading_offset = 0.0
-		_jsbsim.reset(0.55, 0.0, 0.0)
-		global_transform = Transform3D(Basis.IDENTITY, RUNWAY_SPAWN)
+		_js_grounded = true
+		_ground_speed = 0.0
+		_ground_heading = 0.0
+		global_transform = Transform3D(Basis(Vector3.RIGHT, ADVANCED_GROUND_PITCH), RUNWAY_SPAWN)
 		linear_velocity = Vector3.ZERO
 		angular_velocity = Vector3.ZERO
 		return

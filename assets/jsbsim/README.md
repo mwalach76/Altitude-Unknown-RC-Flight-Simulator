@@ -8,6 +8,11 @@ modification from ArduPilot's `Tools/autotest/aircraft/Rascal` directory on
 110 model and describes it as early-stage. Treat it as a useful RC-trainer
 baseline, not validated manufacturer test data.
 
+The upstream spring-gear/contact definition is unstable when simulated at rest
+with the embedded JSBSim version. RC Flight Lab therefore uses its own runway
+roll and transfers the aircraft to JSBSim at flying speed. Airborne forces,
+moments, propulsion, stalls, and control response remain JSBSim-driven.
+
 Source: https://github.com/ArduPilot/ardupilot/tree/master/Tools/autotest/aircraft/Rascal
 
 ArduPilot is distributed under GPLv3. These copied data files must be treated
