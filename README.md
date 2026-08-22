@@ -66,6 +66,12 @@ maps transmitter commands into JSBSim, and converts JSBSim's NED state into the
 Godot scene. The menu can switch between **JSBSim Rascal 110** and **Simple**;
 if the native extension is absent, the simulator remains usable in Simple mode.
 
+Use the **Aircraft** drop-down in the in-flight menu to select **Rascal** or
+**Juggy**. Rascal remains the known-good baseline. Juggy starts as an exact
+duplicate in `assets/jsbsim/aircraft/Juggy/Juggy.xml`, giving us a separate
+flight model whose aerodynamics, mass, controls, and stall behavior can be
+changed without altering Rascal.
+
 The Rascal data is an established ArduPilot/FlightGear baseline, but its upstream
 notes call it early-stage rather than validated manufacturer test data. Its data
 source and GPLv3-derived licensing caveat are documented in

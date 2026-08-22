@@ -12,6 +12,7 @@ var camera: Camera3D
 var camera_target := Vector3.ZERO
 var hud_visible := true
 var flight_model_button: Button
+var aircraft_selector: OptionButton
 var endpoint_button: Button
 
 func _ready() -> void:
@@ -27,7 +28,7 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("change_camera"):
 		cycle_camera()
 	_update_camera(delta)
-	hud.text = "%s   •   %s\n%3.0f km/h   %4.0f m   THR %3.0f%%   %s%s" % [controller.device_name(), aircraft.flight_model_name, aircraft.airspeed * 3.6, aircraft.global_position.y, aircraft.throttle * 100.0, ["PILOT", "CHASE", "ONBOARD"][camera_mode], "   •   CRASHED" if aircraft.crashed else ""]
+	hud.text = "%s   •   %s   •   %s\n%3.0f km/h   %4.0f m   THR %3.0f%%   %s%s" % [controller.device_name(), aircraft.aircraft_name, aircraft.flight_model_name, aircraft.airspeed * 3.6, aircraft.global_position.y, aircraft.throttle * 100.0, ["PILOT", "CHASE", "ONBOARD"][camera_mode], "   •   CRASHED" if aircraft.crashed else ""]
 	var lines := PackedStringArray()
 	for axis in controller.axis_count():
 		lines.append("Axis %d   %+.3f" % [axis, controller.raw_axis(axis)])
@@ -85,7 +86,7 @@ func _build_ui() -> void:
 
 	quick_panel = PanelContainer.new()
 	quick_panel.position = Vector2(18, 68)
-	quick_panel.size = Vector2(220, 196)
+	quick_panel.size = Vector2(240, 245)
 	quick_panel.visible = false
 	quick_panel.add_theme_stylebox_override("panel", _panel_style(Color(0.03, 0.05, 0.07, 0.88), 12))
 	canvas.add_child(quick_panel)
@@ -95,6 +96,15 @@ func _build_ui() -> void:
 	quick_title.text = "RC FLIGHT LAB"
 	quick_title.add_theme_font_size_override("font_size", 18)
 	quick_box.add_child(quick_title)
+	var aircraft_label := Label.new()
+	aircraft_label.text = "AIRCRAFT"
+	aircraft_label.add_theme_font_size_override("font_size", 12)
+	quick_box.add_child(aircraft_label)
+	aircraft_selector = OptionButton.new()
+	aircraft_selector.add_item("Rascal")
+	aircraft_selector.add_item("Juggy")
+	aircraft_selector.item_selected.connect(_select_aircraft)
+	quick_box.add_child(aircraft_selector)
 	_add_menu_button(quick_box, "Controller setup", func(): setup_panel.visible = true; quick_panel.visible = false)
 	_add_menu_button(quick_box, "Change camera", cycle_camera)
 	_add_menu_button(quick_box, "Reset aircraft", reset_simulation)
@@ -172,6 +182,12 @@ func _add_menu_button(parent: VBoxContainer, label_text: String, callback: Calla
 
 func toggle_flight_model() -> void:
 	aircraft.toggle_flight_model()
+	_update_flight_model_button()
+
+func _select_aircraft(index: int) -> void:
+	var selected_name := aircraft_selector.get_item_text(index)
+	aircraft.set_aircraft_model(selected_name)
+	reset_simulation()
 	_update_flight_model_button()
 
 func _toggle_endpoint_calibration() -> void:

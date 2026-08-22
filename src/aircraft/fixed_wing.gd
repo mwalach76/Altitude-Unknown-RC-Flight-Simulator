@@ -19,6 +19,7 @@ var roll_command := 0.0
 var pitch_command := 0.0
 var yaw_command := 0.0
 var flight_model_name := "Simple"
+var aircraft_name := "Rascal"
 var advanced_error := ""
 
 var _jsbsim: Object
@@ -63,7 +64,12 @@ func advanced_available() -> bool:
 
 func set_advanced_mode(enabled: bool) -> bool:
 	_advanced_mode = enabled and advanced_available()
-	flight_model_name = "JSBSim Rascal 110" if _advanced_mode else "Simple"
+	if not _advanced_mode:
+		flight_model_name = "Simple"
+	elif aircraft_name == "Rascal":
+		flight_model_name = "JSBSim Rascal 110"
+	else:
+		flight_model_name = "JSBSim Juggy"
 	custom_integrator = _advanced_mode
 	freeze = _advanced_mode
 	reset_aircraft()
@@ -72,7 +78,16 @@ func set_advanced_mode(enabled: bool) -> bool:
 func toggle_flight_model() -> bool:
 	return set_advanced_mode(not _advanced_mode)
 
+func set_aircraft_model(model_name: String) -> bool:
+	if model_name != "Rascal" and model_name != "Juggy":
+		return false
+	aircraft_name = model_name
+	_initialize_jsbsim()
+	return advanced_available()
+
 func _initialize_jsbsim() -> void:
+	_jsbsim = null
+	advanced_error = ""
 	if not ClassDB.class_exists(&"JsbsimBridge"):
 		advanced_error = "Native JSBSim extension is not available"
 		return
@@ -82,7 +97,7 @@ func _initialize_jsbsim() -> void:
 		advanced_error = "Could not prepare the JSBSim aircraft data"
 		_jsbsim = null
 		return
-	if not _jsbsim.initialize(data_root, "Rascal", JSBSIM_STEP):
+	if not _jsbsim.initialize(data_root, aircraft_name, JSBSIM_STEP):
 		advanced_error = _jsbsim.last_error()
 		_jsbsim = null
 		return
@@ -97,6 +112,7 @@ func _jsbsim_data_root() -> String:
 	var output_root := "user://jsbsim-data"
 	var files := [
 		"aircraft/Rascal/Rascal.xml",
+		"aircraft/Juggy/Juggy.xml",
 		"engine/Zenoah_G-26A.xml",
 		"engine/18x8.xml",
 	]

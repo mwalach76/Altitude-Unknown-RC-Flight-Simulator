@@ -1,7 +1,7 @@
 class_name FlyingField
 extends Node3D
 
-const PANORAMA := preload("res://assets/environment/rc_flying_field_panorama_v2.png")
+const PANORAMA := preload("res://assets/environment/rc_flying_field_panorama_v3.png")
 
 var _windsock_pivot: Node3D
 var _windsock_time := 0.0
@@ -18,7 +18,7 @@ func build() -> WorldEnvironment:
 	var environment := Environment.new()
 	var sky := Sky.new()
 	var panorama := PanoramaSkyMaterial.new()
-	panorama.panorama = PANORAMA
+	panorama.panorama = make_seamless_panorama(PANORAMA)
 	sky.sky_material = panorama
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
@@ -44,6 +44,25 @@ func build() -> WorldEnvironment:
 	_add_hangar(Vector3(-38, 0, -34))
 	_add_markers()
 	return world
+
+static func make_seamless_panorama(source: Texture2D) -> ImageTexture:
+	var image := source.get_image()
+	var width := image.get_width()
+	var blend_width := mini(128, width / 8)
+	# Cross-blend corresponding pixels on both sides of the wrap. The boundary
+	# columns become identical, while smoothstep makes the correction disappear
+	# gradually before it reaches the untouched center of the panorama.
+	for y in image.get_height():
+		for offset in blend_width:
+			var left_x := offset
+			var right_x := width - 1 - offset
+			var left := image.get_pixel(left_x, y)
+			var right := image.get_pixel(right_x, y)
+			var shared := left.lerp(right, 0.5)
+			var keep_original := smoothstep(0.0, 1.0, float(offset) / float(blend_width - 1))
+			image.set_pixel(left_x, y, shared.lerp(left, keep_original))
+			image.set_pixel(right_x, y, shared.lerp(right, keep_original))
+	return ImageTexture.create_from_image(image)
 
 func _add_ground() -> void:
 	var ground := StaticBody3D.new()
