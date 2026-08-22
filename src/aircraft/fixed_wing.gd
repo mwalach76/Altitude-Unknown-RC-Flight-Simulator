@@ -26,9 +26,11 @@ var _js_heading_offset := 0.0
 var _js_grounded := true
 var _ground_speed := 0.0
 var _ground_heading := 0.0
+var _airborne_handoff_s := 0.0
 const JSBSIM_STEP := 1.0 / 120.0
 const ADVANCED_GROUND_PITCH := deg_to_rad(12.0)
 const ADVANCED_LIFTOFF_SPEED := 11.0
+const AIRBORNE_CONTROL_BLEND_S := 2.0
 
 var propeller: Node3D
 var left_aileron: Node3D
@@ -121,11 +123,18 @@ func _physics_process(_delta: float) -> void:
 	if _js_grounded:
 		_step_advanced_ground(_delta)
 		return
+	_airborne_handoff_s += _delta
+	var handoff_blend := smoothstep(0.0, AIRBORNE_CONTROL_BLEND_S, _airborne_handoff_s)
 	# Godot normally runs at 60 Hz; two fixed 120 Hz FDM steps keep JSBSim
 	# deterministic and independent of the display frame rate.
 	var result: Dictionary
 	for iteration in 2:
-		result = _jsbsim.step(throttle, roll_command, pitch_command, yaw_command)
+		result = _jsbsim.step(
+			throttle * handoff_blend,
+			roll_command * handoff_blend,
+			pitch_command * handoff_blend,
+			yaw_command * handoff_blend
+		)
 		_js_position += Vector3(
 			float(result.get("east_mps", 0.0)),
 			-float(result.get("down_mps", 0.0)),
@@ -155,6 +164,7 @@ func _step_advanced_ground(delta: float) -> void:
 	airspeed = _ground_speed
 	if _ground_speed >= ADVANCED_LIFTOFF_SPEED and (pitch_command < -0.08 or _ground_speed >= ADVANCED_LIFTOFF_SPEED + 2.0):
 		_js_grounded = false
+		_airborne_handoff_s = 0.0
 		_js_position.y = 1.0
 		_js_heading_offset = 0.0
 		_jsbsim.reset(1.0, _ground_speed, rad_to_deg(_ground_heading), 6.0)
@@ -203,6 +213,7 @@ func reset_aircraft() -> void:
 		_js_position = RUNWAY_SPAWN
 		_js_heading_offset = 0.0
 		_js_grounded = true
+		_airborne_handoff_s = 0.0
 		_ground_speed = 0.0
 		_ground_heading = 0.0
 		global_transform = Transform3D(Basis(Vector3.RIGHT, ADVANCED_GROUND_PITCH), RUNWAY_SPAWN)

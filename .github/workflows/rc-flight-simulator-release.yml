@@ -48,6 +48,7 @@ jobs:
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_ground_stability.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_reset_determinism.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/reset_camera_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/takeoff_camera_smoke.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_visual_smoke.gd
           mkdir -p "$PROJECT_DIR/builds"
           "$GODOT" --headless --path "$PROJECT_DIR" --export-release "macOS Universal" builds/RC-Flight-Lab-macOS.zip
@@ -86,6 +87,7 @@ jobs:
           & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/rascal_ground_stability.gd
           & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/rascal_reset_determinism.gd
           & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/reset_camera_smoke.gd
+          & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/takeoff_camera_smoke.gd
           & $godot.FullName --headless --path $env:PROJECT_DIR --script res://tests/rascal_visual_smoke.gd
           New-Item -ItemType Directory -Force "$env:PROJECT_DIR/builds/windows" | Out-Null
           & $godot.FullName --headless --path $env:PROJECT_DIR --export-release "Windows x86-64" builds/windows/RC-Flight-Lab.exe
@@ -123,6 +125,7 @@ jobs:
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_ground_stability.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_reset_determinism.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/reset_camera_smoke.gd
+          "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/takeoff_camera_smoke.gd
           "$GODOT" --headless --path "$PROJECT_DIR" --script res://tests/rascal_visual_smoke.gd
           mkdir -p "$PROJECT_DIR/builds/raspberry-pi"
           "$GODOT" --headless --path "$PROJECT_DIR" --export-release "Raspberry Pi ARM64" builds/raspberry-pi/RC-Flight-Lab.arm64
