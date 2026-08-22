@@ -16,13 +16,14 @@ func _run() -> void:
 			airborne = true
 			break
 	Input.action_release("throttle_up")
-	Input.action_release("pitch_down")
 	if not airborne:
 		_fail("Automated runway roll never reached liftoff")
 		return
 	var liftoff_position: Vector3 = simulator.aircraft.global_position
 	var liftoff_pitch: float = simulator.aircraft.rotation.x
 	var minimum_height := liftoff_position.y
+	var previous_height := liftoff_position.y
+	var maximum_height_step := 0.0
 	await physics_frame
 	minimum_height = minf(minimum_height, simulator.aircraft.global_position.y)
 	if absf(simulator.aircraft.global_position.y - liftoff_position.y) > 0.1:
@@ -31,9 +32,12 @@ func _run() -> void:
 	if absf(simulator.aircraft.rotation.x - liftoff_pitch) > deg_to_rad(2.0):
 		_fail("Aircraft attitude snapped at the airborne handoff")
 		return
-	for frame in 29:
+	for frame in 119:
 		await physics_frame
 		minimum_height = minf(minimum_height, simulator.aircraft.global_position.y)
+		maximum_height_step = maxf(maximum_height_step, absf(simulator.aircraft.global_position.y - previous_height))
+		previous_height = simulator.aircraft.global_position.y
+	Input.action_release("pitch_down")
 	var aircraft_position: Vector3 = simulator.aircraft.global_position
 	var camera_position: Vector3 = simulator.camera.global_position
 	var camera_forward: Vector3 = -simulator.camera.global_basis.z
@@ -41,11 +45,17 @@ func _run() -> void:
 	if not aircraft_position.is_finite() or not simulator.aircraft.global_basis.is_finite():
 		_fail("First airborne transform is not finite")
 		return
-	if aircraft_position.distance_to(liftoff_position) > 15.0:
+	if aircraft_position.distance_to(liftoff_position) > 50.0:
 		_fail("Aircraft jumped an unrealistic distance at the airborne handoff")
 		return
 	if minimum_height < liftoff_position.y - 0.001:
 		_fail("Aircraft sank below runway height during liftoff")
+		return
+	if maximum_height_step > 0.1:
+		_fail("Aircraft hopped vertically during liftoff")
+		return
+	if aircraft_position.y < liftoff_position.y + 0.1:
+		_fail("Elevator command did not produce a positive climb")
 		return
 	if camera_forward.dot(target_direction) < 0.999:
 		_fail("Pilot camera is not aimed at its target after liftoff")

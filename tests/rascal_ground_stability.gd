@@ -13,7 +13,7 @@ func _run() -> void:
 	if aircraft.flight_model_name != "JSBSim Rascal 110":
 		_fail("Advanced Rascal model did not start: " + aircraft.advanced_error)
 		return
-	if aircraft.global_position.distance_to(Vector3(0, 0.55, 18.0)) > 0.02:
+	if aircraft.global_position.distance_to(Vector3(0, 0.363524, 18.0)) > 0.02:
 		_fail("Rascal moved on the ground with zero controls")
 		return
 	if absf(rad_to_deg(aircraft.rotation.x) - 12.0) > 0.2 or absf(rad_to_deg(aircraft.rotation.z)) > 0.2:

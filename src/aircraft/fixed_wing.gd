@@ -5,7 +5,9 @@ const AIR_DENSITY := 1.225
 const VISUAL_SCALE := 1.65
 const WING_CENTER_Z := -0.08 * VISUAL_SCALE
 const WING_CHORD := 0.36 * VISUAL_SCALE
-const RUNWAY_SPAWN := Vector3(0, 0.55, 18.0)
+const RUNWAY_SURFACE_Y := 0.03
+const RASCAL_GEAR_BOTTOM_Y := -0.333524
+const RUNWAY_SPAWN := Vector3(0, RUNWAY_SURFACE_Y - RASCAL_GEAR_BOTTOM_Y, 18.0)
 const GROUND_ATTITUDE_DEG := 12.0
 
 var config := TrainerConfig.new()
@@ -176,7 +178,9 @@ func _step_advanced_ground(delta: float) -> void:
 		_js_grounded = false
 		_airborne_handoff_s = 0.0
 		_js_heading_offset = 0.0
-		_jsbsim.reset(1.0, _ground_speed, rad_to_deg(_ground_heading), 6.0)
+		# Begin with a horizontal velocity vector. Elevator and aerodynamic lift
+		# create the climb instead of injecting an artificial upward component.
+		_jsbsim.reset(1.0, _ground_speed, rad_to_deg(_ground_heading), 0.0)
 
 func _process(delta: float) -> void:
 	if propeller:
