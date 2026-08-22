@@ -15,7 +15,15 @@ func _init() -> void:
 		if not rascal.contains(values[0]) or not juggy.contains(values[1]):
 			_fail("Juggy %s tuning is missing" % label)
 			return
-	print("JUGGY_TUNING_PASS glide_drag=2.667x controls=3x")
+	if not juggy.contains("engine file=\"Juggy_G-26A\"") or not juggy.contains("thruster file=\"Juggy_18x16\""):
+		_fail("Juggy independent propulsion references are missing")
+		return
+	var engine := FileAccess.get_file_as_string("res://assets/jsbsim/engine/Juggy_G-26A.xml")
+	var propeller := FileAccess.get_file_as_string("res://assets/jsbsim/engine/Juggy_18x16.xml")
+	if not engine.contains("17658.16") or not propeller.contains("<minpitch>60</minpitch>"):
+		_fail("Juggy 2x-speed propulsion tune is missing")
+		return
+	print("JUGGY_TUNING_PASS glide=0.375x controls=3x power=8x prop_pitch=2x")
 	quit()
 
 func _fail(message: String) -> void:

@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<!-- Juggy experimental engine: 8x Rascal power for approximately 2x speed. -->
+<electric_engine name="juggy_electric_8x">
+  <power unit="WATTS">17658.16</power>
+</electric_engine>

@@ -100,7 +100,7 @@
     </ground_reactions>
 
     <propulsion>
-        <engine file="Zenoah_G-26A">
+        <engine file="Juggy_G-26A">
             <location unit="IN">
                 <x> 36 </x>
                 <y> 0 </y>
@@ -112,7 +112,7 @@
                 <yaw> 0 </yaw>
             </orient>
             <feed>0</feed>
-            <thruster file="18x8">
+            <thruster file="Juggy_18x16">
                 <location unit="IN">
                     <x> 1 </x>
                     <y> 0 </y>

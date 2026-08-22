@@ -75,6 +75,8 @@ changed without altering Rascal.
 Juggy's experimental tune uses 2.667 times Rascal's parasite and induced drag
 for roughly 37.5% of Rascal's best glide ratio, and triples its aileron,
 elevator, and rudder moment coefficients for three times the control response.
+Its independent 8x-power, double-pitch propulsion tune targets twice its prior
+airborne speed, while a separate runway acceleration tune halves takeoff roll.
 
 The Rascal data is an established ArduPilot/FlightGear baseline, but its upstream
 notes call it early-stage rather than validated manufacturer test data. Its data

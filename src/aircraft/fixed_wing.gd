@@ -33,6 +33,8 @@ var _airborne_handoff_s := 0.0
 const JSBSIM_STEP := 1.0 / 120.0
 const ADVANCED_GROUND_PITCH := deg_to_rad(12.0)
 const ADVANCED_LIFTOFF_SPEED := 11.0
+const RASCAL_GROUND_ACCELERATION := 5.2
+const JUGGY_GROUND_ACCELERATION := 7.85
 const AIRBORNE_CONTROL_BLEND_S := 2.0
 const HANDOFF_MAX_CLIMB_MPS := 1.5
 
@@ -115,6 +117,8 @@ func _jsbsim_data_root() -> String:
 		"aircraft/Juggy/Juggy.xml",
 		"engine/Zenoah_G-26A.xml",
 		"engine/18x8.xml",
+		"engine/Juggy_G-26A.xml",
+		"engine/Juggy_18x16.xml",
 	]
 	for relative_path in files:
 		var output_path: String = output_root.path_join(relative_path)
@@ -191,7 +195,8 @@ func _step_advanced_ground(delta: float) -> void:
 	# The upstream Rascal's spring-gear model is numerically unstable at rest.
 	# Keep the runway roll deterministic, then hand the aircraft to JSBSim at
 	# flying speed. JSBSim remains responsible for all airborne dynamics.
-	var acceleration := throttle * 5.2 - 0.032 * _ground_speed * _ground_speed
+	var ground_acceleration := JUGGY_GROUND_ACCELERATION if aircraft_name == "Juggy" else RASCAL_GROUND_ACCELERATION
+	var acceleration := throttle * ground_acceleration - 0.032 * _ground_speed * _ground_speed
 	_ground_speed = maxf(0.0, _ground_speed + acceleration * delta)
 	_ground_heading += yaw_command * minf(_ground_speed / 5.0, 1.0) * delta * 0.65
 	var forward := Vector3(sin(_ground_heading), 0.0, -cos(_ground_heading))
