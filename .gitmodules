@@ -1,0 +1,6 @@
+[submodule "native/third_party/godot-cpp"]
+	path = native/third_party/godot-cpp
+	url = https://github.com/godotengine/godot-cpp.git
+[submodule "native/third_party/jsbsim"]
+	path = native/third_party/jsbsim
+	url = https://github.com/JSBSim-Team/jsbsim.git
