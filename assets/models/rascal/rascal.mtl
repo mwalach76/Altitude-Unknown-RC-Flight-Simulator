@@ -1,0 +1,35 @@
+newmtl mat0
+Kd 0.0 0.0 0.0
+d 1.0
+newmtl tex_mat0
+Kd 0.0 0.0 0.0
+d 1.0
+map_Kd rascal.png
+newmtl mat1
+Kd 1.0 1.0 1.0
+d 1.0
+newmtl tex_mat1
+Kd 1.0 1.0 1.0
+d 1.0
+map_Kd rascal.png
+newmtl mat2
+Kd 0.533 0.533 0.533
+d 1.0
+newmtl tex_mat2
+Kd 0.533 0.533 0.533
+d 1.0
+map_Kd rascal.png
+newmtl mat3
+Kd 0.8 0.8 0.8
+d 0.06299999999999994
+newmtl tex_mat3
+Kd 0.8 0.8 0.8
+d 0.06299999999999994
+map_Kd rascal.png
+newmtl mat4
+Kd 0.7 0.7 0.7
+d 1.0
+newmtl tex_mat4
+Kd 0.7 0.7 0.7
+d 1.0
+map_Kd rascal.png

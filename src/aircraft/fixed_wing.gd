@@ -189,6 +189,10 @@ func _apply_expo(input_value: float) -> float:
 	return lerpf(input_value, input_value * input_value * input_value, config.control_expo)
 
 func _build_geometry() -> void:
+	if ResourceLoader.exists("res://assets/models/rascal/rascal_body.obj"):
+		_build_rascal_geometry()
+		_build_collision_geometry()
+		return
 	var body_blue := _material(Color("175a9e"), 0.28, 0.15)
 	var wing_white := _material(Color("f4f6f8"), 0.34)
 	var trim_orange := _material(Color("f0a12b"), 0.3)
@@ -222,9 +226,33 @@ func _build_geometry() -> void:
 	_add_box_to(propeller, Vector3.ZERO, Vector3(0.055, 0.60, 0.025) * VISUAL_SCALE, dark)
 	_add_sphere_to(propeller, Vector3.ZERO, Vector3(0.08, 0.08, 0.06) * VISUAL_SCALE, trim_orange)
 
+	_build_collision_geometry()
+
+func _build_rascal_geometry() -> void:
+	var body := MeshInstance3D.new()
+	body.name = "RascalBody"
+	body.mesh = load("res://assets/models/rascal/rascal_body.obj")
+	add_child(body)
+
+	left_aileron = _rascal_control_surface("res://assets/models/rascal/l_aileron.obj", Vector3(0.450, 0.139, -0.18956))
+	right_aileron = _rascal_control_surface("res://assets/models/rascal/r_aileron.obj", Vector3(-0.450, 0.139, -0.18956))
+	elevator_surface = _rascal_control_surface("res://assets/models/rascal/elevator.obj", Vector3(0.0, 0.051, 0.82744))
+	rudder_surface = _rascal_control_surface("res://assets/models/rascal/rudder.obj", Vector3(0.0, 0.0, 0.82744))
+	propeller = _rascal_control_surface("res://assets/models/rascal/prop_disk.obj", Vector3(0.0, 0.0, -0.87376))
+
+func _rascal_control_surface(path: String, pivot_position: Vector3) -> Node3D:
+	var pivot := Node3D.new()
+	pivot.position = pivot_position
+	add_child(pivot)
+	var surface := MeshInstance3D.new()
+	surface.mesh = load(path)
+	pivot.add_child(surface)
+	return pivot
+
+func _build_collision_geometry() -> void:
 	# Keep the aerodynamic body origin independent of the contact geometry.
 	# Three wheel contact shapes let the trainer sit on the runway instead of
-	# hovering on the old fuselage-sized collision box.
+	# hovering on a fuselage-sized collision box.
 	_add_box_collision(Vector3(0, 0, 0.02) * VISUAL_SCALE, Vector3(0.34, 0.30, 1.50) * VISUAL_SCALE)
 	_add_sphere_collision(Vector3(-0.23, -0.25, -0.18) * VISUAL_SCALE, 0.095 * VISUAL_SCALE)
 	_add_sphere_collision(Vector3(0.23, -0.25, -0.18) * VISUAL_SCALE, 0.095 * VISUAL_SCALE)

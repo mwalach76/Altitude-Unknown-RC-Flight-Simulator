@@ -20,7 +20,18 @@ The trainer starts stationary on its landing gear near the end of the runway. Ad
 
 ## Visual presentation
 
-The current scene uses a rounded procedural high-wing trainer with animated control surfaces, landing gear, and a spinning propeller. An original panoramic rural flying-field backdrop is combined with 3D grass, runway markings, safety fencing, cones, and a small hangar. The default ground-pilot camera tracks the airplane and automatically narrows its field of view with distance so the model remains readable during a normal circuit. Chase and onboard cameras remain available with **C**.
+The current scene uses the matching FlightGear/ArduPilot SIG Rascal 110 visual
+model, converted to Godot-native OBJ/PNG assets and centered on the JSBSim CG.
+Its ailerons, elevator, and rudder remain animated from the live transmitter
+commands. A procedural high-wing model remains as a source-level fallback if
+the imported assets are unavailable. Asset provenance and GPLv3 terms are in
+`assets/models/rascal/README.md`.
+
+An original panoramic rural flying-field backdrop is combined with 3D grass,
+runway markings, safety fencing, cones, and a small hangar. The default
+ground-pilot camera tracks the airplane and automatically narrows its field of
+view with distance so the model remains readable during a normal circuit.
+Chase and onboard cameras remain available with **C**.
 
 ## Physics
 
@@ -59,7 +70,7 @@ Godot coordinates are used consistently: **-Z forward, +X right, +Y up**. Positi
 - Fuselage, tail, and landing-gear drag are currently combined into the profile-drag coefficient.
 - Control surfaces generate direct moments scaled by dynamic pressure.
 - The trainer CG defaults to 33% of the visible wing chord measured aft from the leading edge.
-- The visual model is procedural and moderately detailed; its fuselage and landing-gear collision shapes remain deliberately simple.
+- The Rascal visual mesh is an older, modest-detail FlightGear asset; its fuselage and landing-gear collision shapes remain deliberately simple.
 
 ## Project roadmap
 
