@@ -1,7 +1,17 @@
 class_name FlyingField
 extends Node3D
 
-const PANORAMA := preload("res://assets/environment/rc_flying_field_panorama.png")
+const PANORAMA := preload("res://assets/environment/rc_flying_field_panorama_v2.png")
+
+var _windsock_pivot: Node3D
+var _windsock_time := 0.0
+
+func _process(delta: float) -> void:
+	if _windsock_pivot == null:
+		return
+	_windsock_time += delta
+	_windsock_pivot.rotation.z = deg_to_rad(4.0 + sin(_windsock_time * 1.7) * 3.0)
+	_windsock_pivot.rotation.y = deg_to_rad(sin(_windsock_time * 0.45) * 4.0)
 
 func build() -> WorldEnvironment:
 	var world := WorldEnvironment.new()
@@ -71,6 +81,58 @@ func _add_hangar(pos: Vector3) -> void:
 	_add_box(pos + Vector3(0, 2.2, 0), Vector3(10, 4.4, 7), Color("d8d1bf"), 0.8)
 	_add_box(pos + Vector3(0, 2.0, 3.52), Vector3(7.2, 3.7, 0.08), Color("45515b"), 0.72)
 	_add_box(pos + Vector3(0, 4.55, 0), Vector3(10.8, 0.18, 7.8), Color("8b3d32"), 0.7)
+	_add_hangar_sign(pos)
+	_add_rooftop_windsock(pos)
+
+func _add_hangar_sign(pos: Vector3) -> void:
+	var sign := Label3D.new()
+	sign.name = "AscendHangarSign"
+	sign.text = "ASCEND"
+	sign.font_size = 160
+	sign.pixel_size = 0.012
+	sign.modulate = Color("f6f2e8")
+	sign.outline_modulate = Color("28343b")
+	sign.outline_size = 14
+	sign.position = pos + Vector3(0, 2.8, 3.57)
+	add_child(sign)
+
+func _add_rooftop_windsock(pos: Vector3) -> void:
+	var pole_material := _make_material(Color("b8bec2"), 0.38, 0.55)
+	var pole := MeshInstance3D.new()
+	var pole_mesh := CylinderMesh.new()
+	pole_mesh.top_radius = 0.035
+	pole_mesh.bottom_radius = 0.035
+	pole_mesh.height = 2.2
+	pole_mesh.radial_segments = 12
+	pole_mesh.material = pole_material
+	pole.mesh = pole_mesh
+	pole.position = pos + Vector3(0, 5.75, 0)
+	add_child(pole)
+
+	_windsock_pivot = Node3D.new()
+	_windsock_pivot.name = "RooftopWindsock"
+	_windsock_pivot.position = pos + Vector3(0, 6.82, 0)
+	add_child(_windsock_pivot)
+	var colors := [Color("ef5b2a"), Color("f6f1df"), Color("ef5b2a"), Color("f6f1df")]
+	for index in 4:
+		var section := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.height = 0.48
+		mesh.bottom_radius = 0.22 - index * 0.04
+		mesh.top_radius = 0.18 - index * 0.04
+		mesh.radial_segments = 16
+		mesh.material = _make_material(colors[index], 0.72)
+		section.mesh = mesh
+		section.rotation.z = deg_to_rad(-90.0)
+		section.position.x = 0.24 + index * 0.46
+		_windsock_pivot.add_child(section)
+
+func _make_material(color: Color, roughness: float, metallic := 0.0) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = roughness
+	material.metallic = metallic
+	return material
 
 func _add_markers() -> void:
 	for z in range(-68, 22, 10):

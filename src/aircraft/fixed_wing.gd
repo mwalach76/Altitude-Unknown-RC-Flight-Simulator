@@ -33,6 +33,7 @@ const JSBSIM_STEP := 1.0 / 120.0
 const ADVANCED_GROUND_PITCH := deg_to_rad(12.0)
 const ADVANCED_LIFTOFF_SPEED := 11.0
 const AIRBORNE_CONTROL_BLEND_S := 2.0
+const HANDOFF_MAX_CLIMB_MPS := 1.5
 
 var propeller: Node3D
 var left_aileron: Node3D
@@ -129,6 +130,7 @@ func _physics_process(_delta: float) -> void:
 	var handoff_blend := smoothstep(0.0, AIRBORNE_CONTROL_BLEND_S, _airborne_handoff_s)
 	# Godot normally runs at 60 Hz; two fixed 120 Hz FDM steps keep JSBSim
 	# deterministic and independent of the display frame rate.
+	var previous_height := _js_position.y
 	var result: Dictionary
 	for iteration in 2:
 		result = _jsbsim.step(
@@ -146,7 +148,11 @@ func _physics_process(_delta: float) -> void:
 	# initial sink put the visual model below the runway while thrust and control
 	# authority blend in; upward velocity still produces a natural liftoff.
 	if _airborne_handoff_s < AIRBORNE_CONTROL_BLEND_S:
-		_js_position.y = maxf(_js_position.y, RUNWAY_SPAWN.y)
+		_js_position.y = clampf(
+			_js_position.y,
+			RUNWAY_SPAWN.y,
+			previous_height + HANDOFF_MAX_CLIMB_MPS * _delta
+		)
 	if not bool(result.get("ready", false)):
 		advanced_error = _jsbsim.last_error()
 		set_advanced_mode(false)
@@ -160,7 +166,9 @@ func _physics_process(_delta: float) -> void:
 	# deterministic runway model. Position already advances from the wheel-on-
 	# runway height using JSBSim's actual climb velocity.
 	var ground_attitude := Basis(Vector3.UP, -_ground_heading) * Basis(Vector3.RIGHT, ADVANCED_GROUND_PITCH)
-	var attitude := ground_attitude.slerp(jsbsim_attitude, handoff_blend)
+	var height_above_runway := maxf(0.0, _js_position.y - RUNWAY_SPAWN.y)
+	var liftoff_blend := smoothstep(0.0, 0.35, height_above_runway)
+	var attitude := ground_attitude.slerp(jsbsim_attitude, handoff_blend * liftoff_blend)
 	global_transform = Transform3D(attitude, _js_position)
 
 func _step_advanced_ground(delta: float) -> void:

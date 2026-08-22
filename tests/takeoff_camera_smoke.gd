@@ -51,8 +51,8 @@ func _run() -> void:
 	if minimum_height < liftoff_position.y - 0.001:
 		_fail("Aircraft sank below runway height during liftoff")
 		return
-	if maximum_height_step > 0.1:
-		_fail("Aircraft hopped vertically during liftoff")
+	if maximum_height_step > 0.04:
+		_fail("Aircraft hopped vertically during liftoff (step %.4f m)" % maximum_height_step)
 		return
 	if aircraft_position.y < liftoff_position.y + 0.1:
 		_fail("Elevator command did not produce a positive climb")
