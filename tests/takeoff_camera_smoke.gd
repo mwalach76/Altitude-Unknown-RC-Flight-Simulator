@@ -21,7 +21,15 @@ func _run() -> void:
 		_fail("Automated runway roll never reached liftoff")
 		return
 	var liftoff_position: Vector3 = simulator.aircraft.global_position
-	for frame in 30:
+	var liftoff_pitch: float = simulator.aircraft.rotation.x
+	await physics_frame
+	if absf(simulator.aircraft.global_position.y - liftoff_position.y) > 0.1:
+		_fail("Aircraft jumped vertically at the airborne handoff")
+		return
+	if absf(simulator.aircraft.rotation.x - liftoff_pitch) > deg_to_rad(2.0):
+		_fail("Aircraft attitude snapped at the airborne handoff")
+		return
+	for frame in 29:
 		await physics_frame
 	var aircraft_position: Vector3 = simulator.aircraft.global_position
 	var camera_position: Vector3 = simulator.camera.global_position

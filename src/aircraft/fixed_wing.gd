@@ -148,7 +148,12 @@ func _physics_process(_delta: float) -> void:
 	var roll := float(result.get("roll_rad", 0.0))
 	var pitch := float(result.get("pitch_rad", 0.0))
 	var heading := float(result.get("heading_rad", 0.0)) + _js_heading_offset
-	var attitude := Basis(Vector3.UP, -heading) * Basis(Vector3.RIGHT, pitch) * Basis(Vector3.BACK, -roll)
+	var jsbsim_attitude := Basis(Vector3.UP, -heading) * Basis(Vector3.RIGHT, pitch) * Basis(Vector3.BACK, -roll)
+	# Keep the visible attitude continuous while JSBSim takes ownership from the
+	# deterministic runway model. Position already advances from the wheel-on-
+	# runway height using JSBSim's actual climb velocity.
+	var ground_attitude := Basis(Vector3.UP, -_ground_heading) * Basis(Vector3.RIGHT, ADVANCED_GROUND_PITCH)
+	var attitude := ground_attitude.slerp(jsbsim_attitude, handoff_blend)
 	global_transform = Transform3D(attitude, _js_position)
 
 func _step_advanced_ground(delta: float) -> void:
@@ -165,7 +170,6 @@ func _step_advanced_ground(delta: float) -> void:
 	if _ground_speed >= ADVANCED_LIFTOFF_SPEED and (pitch_command < -0.08 or _ground_speed >= ADVANCED_LIFTOFF_SPEED + 2.0):
 		_js_grounded = false
 		_airborne_handoff_s = 0.0
-		_js_position.y = 1.0
 		_js_heading_offset = 0.0
 		_jsbsim.reset(1.0, _ground_speed, rad_to_deg(_ground_heading), 6.0)
 
