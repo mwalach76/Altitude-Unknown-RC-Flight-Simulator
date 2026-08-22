@@ -36,6 +36,7 @@ const ADVANCED_LIFTOFF_SPEED := 11.0
 const RASCAL_GROUND_ACCELERATION := 5.2
 const JUGGY_GROUND_ACCELERATION := 7.85
 const AIRBORNE_CONTROL_BLEND_S := 2.0
+const JUGGY_AIRBORNE_BLEND_S := 4.0
 const HANDOFF_MAX_CLIMB_MPS := 1.5
 
 var propeller: Node3D
@@ -147,7 +148,8 @@ func _physics_process(_delta: float) -> void:
 		_step_advanced_ground(_delta)
 		return
 	_airborne_handoff_s += _delta
-	var handoff_blend := smoothstep(0.0, AIRBORNE_CONTROL_BLEND_S, _airborne_handoff_s)
+	var handoff_duration := JUGGY_AIRBORNE_BLEND_S if aircraft_name == "Juggy" else AIRBORNE_CONTROL_BLEND_S
+	var handoff_blend := smoothstep(0.0, handoff_duration, _airborne_handoff_s)
 	# Godot normally runs at 60 Hz; two fixed 120 Hz FDM steps keep JSBSim
 	# deterministic and independent of the display frame rate.
 	var previous_height := _js_position.y
@@ -167,7 +169,7 @@ func _physics_process(_delta: float) -> void:
 	# The advanced model has no usable wheel-contact phase. Do not let a small
 	# initial sink put the visual model below the runway while thrust and control
 	# authority blend in; upward velocity still produces a natural liftoff.
-	if _airborne_handoff_s < AIRBORNE_CONTROL_BLEND_S:
+	if _airborne_handoff_s < handoff_duration:
 		_js_position.y = clampf(
 			_js_position.y,
 			RUNWAY_SPAWN.y,
