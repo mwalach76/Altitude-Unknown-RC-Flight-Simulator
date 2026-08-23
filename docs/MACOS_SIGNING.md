@@ -13,8 +13,6 @@ Configure these GitHub repository secrets:
 - `MACOS_CERTIFICATE_PASSWORD`: password chosen while exporting the `.p12`.
 - `MACOS_KEYCHAIN_PASSWORD`: strong temporary-keychain password used by the
   GitHub runner.
-- `APPLE_DEVELOPER_ID_APPLICATION`: full certificate name, normally
-  `Developer ID Application: Name (TEAMID)`.
 - `APPLE_ID`: Apple ID belonging to the developer team.
 - `APPLE_APP_SPECIFIC_PASSWORD`: app-specific password created at
   appleid.apple.com. Do not use the normal Apple ID password.
@@ -24,6 +22,7 @@ Add them under **Repository Settings → Secrets and variables → Actions**. Ne
 commit the certificate, private key, passwords, or their base64 representation.
 
 For a tag matching `rc-flight-lab-v*`, the workflow imports the certificate
-into a temporary keychain, signs with hardened runtime and a secure timestamp,
-submits the app with `notarytool`, staples the accepted ticket, and verifies the
-finished app using both `codesign` and Gatekeeper's `spctl`.
+into a temporary keychain, automatically selects its Developer ID Application
+identity, signs with hardened runtime and a secure timestamp, submits the app
+with `notarytool`, staples the accepted ticket, and verifies the finished app
+using both `codesign` and Gatekeeper's `spctl`.
